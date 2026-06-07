@@ -1116,6 +1116,154 @@ MDF Carvalho;18;245.00"></textarea>
     <script>
 
         // =========================================================================
+        // SAFE MAPEAMENTO V11 - material mapeado antes de qualquer leitura de projeto
+        // =========================================================================
+        (function(w) {
+            function norm(valor) {
+                try {
+                    return String(valor == null ? '' : valor)
+                        .toLowerCase()
+                        .normalize('NFD')
+                        .replace(/[\u0300-\u036f]/g, '')
+                        .replace(/ç/g, 'c')
+                        .trim();
+                } catch(e) {
+                    return String(valor == null ? '' : valor).toLowerCase().trim();
+                }
+            }
+
+            function n(valor, padrao) {
+                if (padrao === undefined) padrao = 0;
+                if (valor === null || valor === undefined || valor === '') return padrao;
+                let s = String(valor).trim().replace(/[R$\s]/g, '');
+                if (s.includes(',') && s.includes('.')) s = s.replace(/\./g, '').replace(',', '.');
+                else s = s.replace(',', '.');
+                const r = parseFloat(s);
+                return Number.isFinite(r) ? r : padrao;
+            }
+
+            function lista(nome) {
+                return Array.isArray(w[nome]) ? w[nome] : [];
+            }
+
+            function pontuar(nomeExterno, material) {
+                const alvo = norm(nomeExterno);
+                const nome = norm(material && material.nome ? material.nome : '');
+                let pontos = 0;
+
+                if (!alvo || !nome) return 0;
+                if (alvo === nome) pontos += 100;
+                if (alvo.includes(nome) || nome.includes(alvo)) pontos += 40;
+
+                const tokens = alvo
+                    .replace(/\d+\s*mm/g, ' ')
+                    .replace(/[^a-z0-9]+/g, ' ')
+                    .split(/\s+/)
+                    .filter(function(t) {
+                        return t && !['mdf','mdp','chapa','tx','mm','de','da','do','para','faces','face','2'].includes(t);
+                    });
+
+                tokens.forEach(function(t) {
+                    if (nome.includes(t)) pontos += 8;
+                });
+
+                if (alvo.includes('branco') && nome.includes('branco')) pontos += 20;
+                if (alvo.includes('cinza') && nome.includes('cinza')) pontos += 20;
+                if ((alvo.includes('louro') || alvo.includes('freijo')) && (nome.includes('louro') || nome.includes('freijo'))) pontos += 20;
+                if (alvo.includes('tx') && nome.includes('tx')) pontos += 5;
+
+                return pontos;
+            }
+
+            if (typeof w.encontrarMaterialMapeado !== 'function') {
+                w.encontrarMaterialMapeado = function(nomeExterno, espessura) {
+                    try {
+                        const materiais = lista('materiais');
+                        const dicionario = lista('dicionarioMateriais');
+                        const alvo = norm(nomeExterno);
+                        const esp = n(espessura, 0);
+
+                        if (!alvo && !esp) return null;
+
+                        // 1) Primeiro tenta pelo dicionário/mapeamento salvo.
+                        const mapa = dicionario.find(function(d) {
+                            const promob = norm(d.promob || d.externo || d.nomeExterno || d.nome || '');
+                            return promob && (promob === alvo || alvo.includes(promob) || promob.includes(alvo));
+                        });
+
+                        if (mapa) {
+                            const idLocal = String(mapa.idLocal || mapa.materialId || mapa.id_material || mapa.idMaterial || '');
+                            const porId = materiais.find(function(m) {
+                                return String(m.id || '') === idLocal;
+                            });
+                            if (porId) return porId;
+
+                            const nomeLocal = norm(mapa.local || mapa.material || mapa.nomeLocal || '');
+                            const porNome = materiais.find(function(m) {
+                                return nomeLocal && norm(m.nome || '') === nomeLocal;
+                            });
+                            if (porNome) return porNome;
+                        }
+
+                        // 2) Tenta nome + espessura.
+                        let candidatos = materiais.slice();
+                        if (esp > 0) {
+                            const mesmaEsp = candidatos.filter(function(m) {
+                                return n(m.espessura || m.esp, 0) === esp;
+                            });
+                            if (mesmaEsp.length) candidatos = mesmaEsp;
+                        }
+
+                        let melhor = null;
+                        let melhorPonto = -1;
+
+                        candidatos.forEach(function(m) {
+                            const p = pontuar(nomeExterno, m);
+                            if (p > melhorPonto) {
+                                melhor = m;
+                                melhorPonto = p;
+                            }
+                        });
+
+                        if (melhor && melhorPonto > 0) return melhor;
+
+                        // 3) Fallback: se só existe um material com a espessura pedida, usa ele.
+                        if (esp > 0) {
+                            const porEsp = materiais.filter(function(m) {
+                                return n(m.espessura || m.esp, 0) === esp;
+                            });
+                            if (porEsp.length === 1) return porEsp[0];
+                        }
+
+                        return null;
+                    } catch (erro) {
+                        console.warn('Erro em encontrarMaterialMapeado:', erro);
+                        return null;
+                    }
+                };
+            }
+
+            if (typeof w.buscarMaterialMapeado !== 'function') {
+                w.buscarMaterialMapeado = function(nomeExterno, espessura) {
+                    return w.encontrarMaterialMapeado(nomeExterno, espessura);
+                };
+            }
+
+            if (typeof w.obterMaterialMapeado !== 'function') {
+                w.obterMaterialMapeado = function(nomeExterno, espessura) {
+                    return w.encontrarMaterialMapeado(nomeExterno, espessura);
+                };
+            }
+
+            window.encontrarMaterialMapeado = w.encontrarMaterialMapeado;
+            window.buscarMaterialMapeado = w.buscarMaterialMapeado;
+            window.obterMaterialMapeado = w.obterMaterialMapeado;
+        })(window);
+        // FIM SAFE MAPEAMENTO V11
+
+
+
+        // =========================================================================
         // SAFE BOOTSTRAP V10 - funções críticas antes de qualquer inicialização
         // =========================================================================
         (function(w) {
