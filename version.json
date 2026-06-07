@@ -1,6 +1,6 @@
 {
-  "version": "2026.06.06.8",
+  "version": "2026.06.06.10",
   "name": "Marcenaria Pro",
   "license": "Jeremias Palhão",
-  "notes": "Correção: preencherSelectsProjeto declarado no início do sistema."
+  "notes": "Correção ampla: safe bootstrap com funções críticas de inicialização, renderização e atualização."
 }

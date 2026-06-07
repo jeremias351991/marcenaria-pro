@@ -26,60 +26,17 @@
 
         let pwaNovoWorker = null;
 
-        function mostrarBannerAtualizacaoPwa() {
-            const banner = document.getElementById('pwaUpdateBanner');
-            if (banner) banner.style.display = 'block';
-        }
+        
 
-        function atualizarPwaAgora() {
-            if (pwaNovoWorker) {
-                pwaNovoWorker.postMessage({ type: 'SKIP_WAITING' });
-            } else {
-                window.location.reload();
-            }
-        }
 
-        function registrarServiceWorkerPwa() {
-            if (!('serviceWorker' in navigator)) return;
+        
 
-            navigator.serviceWorker.register('./service-worker.js').then(function(reg) {
-                reg.addEventListener('updatefound', function() {
-                    const novoWorker = reg.installing;
-                    if (!novoWorker) return;
 
-                    novoWorker.addEventListener('statechange', function() {
-                        if (novoWorker.state === 'installed' && navigator.serviceWorker.controller) {
-                            pwaNovoWorker = novoWorker;
-                            mostrarBannerAtualizacaoPwa();
-                        }
-                    });
-                });
-            }).catch(function(err) {
-                console.warn('Service worker não registrado:', err);
-            });
+        
 
-            navigator.serviceWorker.addEventListener('controllerchange', function() {
-                window.location.reload();
-            });
-        }
 
-        function verificarVersaoOnline() {
-            if (typeof fetch !== 'function') return;
-            fetch('./version.json?ts=' + Date.now(), { cache: 'no-store' })
-                .then(function(r) { return r.json(); })
-                .then(function(info) {
-                    const versaoAtual = localStorage.getItem('marcenaria_app_version');
-                    if (!versaoAtual) {
-                        localStorage.setItem('marcenaria_app_version', info.version || '');
-                        return;
-                    }
-                    if (info.version && versaoAtual && info.version !== versaoAtual) {
-                        localStorage.setItem('marcenaria_app_version', info.version);
-                        mostrarBannerAtualizacaoPwa();
-                    }
-                })
-                .catch(function() {});
-        }
+        
+
 
 
         window.addEventListener('load', function() {
@@ -1157,6 +1114,503 @@ MDF Carvalho;18;245.00"></textarea>
     </main>
 
     <script>
+
+        // =========================================================================
+        // SAFE BOOTSTRAP V10 - funções críticas antes de qualquer inicialização
+        // =========================================================================
+        (function(w) {
+            function arr(nome) {
+                return Array.isArray(w[nome]) ? w[nome] : [];
+            }
+
+            function idSeguro(valor) {
+                return String(valor == null ? '' : valor).replace(/\\/g, '\\\\').replace(/"/g, '&quot;');
+            }
+
+            function esc(valor) {
+                return String(valor == null ? '' : valor)
+                    .replace(/&/g, '&amp;')
+                    .replace(/</g, '&lt;')
+                    .replace(/>/g, '&gt;')
+                    .replace(/"/g, '&quot;')
+                    .replace(/'/g, '&#039;');
+            }
+
+            function num(valor, padrao) {
+                if (padrao === undefined) padrao = 0;
+                if (valor === null || valor === undefined || valor === '') return padrao;
+                let s = String(valor).trim().replace(/[R$\s]/g, '');
+                if (!s) return padrao;
+                if (s.includes(',') && s.includes('.')) s = s.replace(/\./g, '').replace(',', '.');
+                else s = s.replace(',', '.');
+                const n = parseFloat(s);
+                return Number.isFinite(n) ? n : padrao;
+            }
+
+            function money(valor) {
+                try {
+                    return (Number(valor) || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+                } catch(e) {
+                    return 'R$ ' + (Number(valor) || 0).toFixed(2);
+                }
+            }
+
+            function normalizar(valor) {
+                return String(valor == null ? '' : valor).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
+            }
+
+            function salvarSeguro(chave, valor) {
+                try {
+                    localStorage.setItem(chave, JSON.stringify(valor));
+                    return true;
+                } catch(e) {
+                    console.warn('Falha ao salvar', chave, e);
+                    return false;
+                }
+            }
+
+            w.materiais = arr('materiais');
+            w.fitas = arr('fitas');
+            w.ferragens = arr('ferragens');
+            w.dicionarioMateriais = arr('dicionarioMateriais');
+            w.projetos = arr('projetos');
+            w.gastosManuais = arr('gastosManuais');
+            if (typeof w.projetoAtual === 'undefined') w.projetoAtual = null;
+
+            if (typeof w.htmlEscape !== 'function') w.htmlEscape = esc;
+            if (typeof w.idAttrSeguro !== 'function') w.idAttrSeguro = idSeguro;
+            if (typeof w.numero !== 'function') w.numero = num;
+            if (typeof w.normalizarNumero !== 'function') w.normalizarNumero = function(v) { return num(v, 0); };
+            if (typeof w.moeda !== 'function') w.moeda = money;
+            if (typeof w.normalizarTexto !== 'function') w.normalizarTexto = normalizar;
+            if (typeof w.salvar !== 'function') w.salvar = salvarSeguro;
+            if (typeof w.gerarId !== 'function') {
+                w.gerarId = function() {
+                    return 'id_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 10);
+                };
+            }
+
+            if (typeof w.mostrarBannerAtualizacaoPwa !== 'function') {
+                w.mostrarBannerAtualizacaoPwa = function() {
+                    const banner = document.getElementById('pwaUpdateBanner');
+                    if (banner) banner.style.display = 'block';
+                };
+            }
+
+            if (typeof w.atualizarPwaAgora !== 'function') {
+                w.atualizarPwaAgora = function() {
+                    try {
+                        if (w.pwaNovoWorker && typeof w.pwaNovoWorker.postMessage === 'function') {
+                            w.pwaNovoWorker.postMessage({ type: 'SKIP_WAITING' });
+                        } else {
+                            location.reload();
+                        }
+                    } catch(e) {
+                        location.reload();
+                    }
+                };
+            }
+
+            if (typeof w.registrarServiceWorkerPwa !== 'function') {
+                w.registrarServiceWorkerPwa = function() {
+                    if (!('serviceWorker' in navigator)) return false;
+                    navigator.serviceWorker.register('./service-worker.js').then(function(reg) {
+                        reg.addEventListener('updatefound', function() {
+                            const novoWorker = reg.installing;
+                            if (!novoWorker) return;
+                            novoWorker.addEventListener('statechange', function() {
+                                if (novoWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                                    w.pwaNovoWorker = novoWorker;
+                                    w.mostrarBannerAtualizacaoPwa();
+                                }
+                            });
+                        });
+                    }).catch(function(err) {
+                        console.warn('Service worker não registrado:', err);
+                    });
+                    navigator.serviceWorker.addEventListener('controllerchange', function() {
+                        location.reload();
+                    });
+                    return true;
+                };
+            }
+
+            if (typeof w.verificarVersaoOnline !== 'function') {
+                w.verificarVersaoOnline = function() {
+                    if (typeof fetch !== 'function') {
+                        alert('Verificação de atualização indisponível neste navegador.');
+                        return false;
+                    }
+                    fetch('./version.json?ts=' + Date.now(), { cache: 'no-store' })
+                        .then(function(r) { return r.json(); })
+                        .then(function(info) {
+                            const nova = info && info.version ? String(info.version) : '';
+                            const atual = localStorage.getItem('marcenaria_app_version') || '';
+                            if (!nova) return alert('Não foi possível identificar a versão publicada.');
+                            if (!atual) {
+                                localStorage.setItem('marcenaria_app_version', nova);
+                                return alert('Versão atual registrada: ' + nova);
+                            }
+                            if (nova !== atual) {
+                                localStorage.setItem('marcenaria_app_version', nova);
+                                w.mostrarBannerAtualizacaoPwa();
+                                return alert('Atualização encontrada: ' + nova);
+                            }
+                            alert('Você já está na versão mais recente: ' + nova);
+                        })
+                        .catch(function() {
+                            alert('Não foi possível verificar atualização agora.');
+                        });
+                    return true;
+                };
+            }
+
+            if (typeof w.excluirFerragem !== 'function') {
+                w.excluirFerragem = function(id) {
+                    w.ferragens = arr('ferragens').filter(function(f) { return String(f.id) !== String(id); });
+                    salvarSeguro('marcenaria_ferragens', w.ferragens);
+                    if (typeof w.renderizarFerragens === 'function') w.renderizarFerragens();
+                };
+            }
+
+            if (typeof w.excluirFita !== 'function') {
+                w.excluirFita = function(id) {
+                    w.fitas = arr('fitas').filter(function(f) { return String(f.id) !== String(id); });
+                    salvarSeguro('marcenaria_fitas', w.fitas);
+                    if (typeof w.renderizarFitas === 'function') w.renderizarFitas();
+                };
+            }
+
+            if (typeof w.excluirMaterial !== 'function') {
+                w.excluirMaterial = function(id) {
+                    w.materiais = arr('materiais').filter(function(m) { return String(m.id) !== String(id); });
+                    salvarSeguro('marcenaria_materiais', w.materiais);
+                    if (typeof w.renderizarMateriais === 'function') w.renderizarMateriais();
+                };
+            }
+
+            if (typeof w.excluirMapeamento !== 'function') {
+                w.excluirMapeamento = function(idx) {
+                    const i = parseInt(idx, 10);
+                    if (Array.isArray(w.dicionarioMateriais) && Number.isFinite(i)) {
+                        w.dicionarioMateriais.splice(i, 1);
+                        salvarSeguro('marcenaria_dicionario', w.dicionarioMateriais);
+                    }
+                    if (typeof w.renderizarDicionario === 'function') w.renderizarDicionario();
+                };
+            }
+
+            if (typeof w.renderizarFerragens !== 'function') {
+                w.renderizarFerragens = function() {
+                    const tbody = document.getElementById('tabelaFerragens');
+                    if (!tbody) return true;
+                    const lista = arr('ferragens');
+                    if (!lista.length) {
+                        tbody.innerHTML = '<tr><td colspan="4" class="py-4 px-2 text-center text-gray-500">Nenhuma ferragem cadastrada.</td></tr>';
+                        return true;
+                    }
+                    tbody.innerHTML = lista.map(function(f) {
+                        const id = idSeguro(f.id || f.nome || w.gerarId());
+                        return `<tr>
+                            <td class="py-2 px-2 font-bold text-gray-800">${esc(f.nome || '')}</td>
+                            <td class="py-2 px-2 text-gray-500 text-xs">${esc(f.unidade || 'Un')}</td>
+                            <td class="py-2 px-2 text-green-700 font-bold">${money(num(f.valor))}</td>
+                            <td class="py-2 px-2 text-right"><button type="button" data-id="${id}" onclick="excluirFerragem(this.dataset.id)" class="text-red-500 font-bold hover:underline">Excluir</button></td>
+                        </tr>`;
+                    }).join('');
+                    return true;
+                };
+            }
+
+            if (typeof w.renderizarFitas !== 'function') {
+                w.renderizarFitas = function() {
+                    const tbody = document.getElementById('tabelaFitas');
+                    if (!tbody) return true;
+                    const lista = arr('fitas');
+                    if (!lista.length) {
+                        tbody.innerHTML = '<tr><td colspan="4" class="py-4 px-2 text-center text-gray-500">Nenhuma fita cadastrada.</td></tr>';
+                        return true;
+                    }
+                    tbody.innerHTML = lista.map(function(f) {
+                        const id = idSeguro(f.id || f.nome || w.gerarId());
+                        return `<tr>
+                            <td class="py-2 px-2 font-bold text-gray-800">${esc(f.nome || '')}</td>
+                            <td class="py-2 px-2">${esc(f.largura || '')}mm</td>
+                            <td class="py-2 px-2 text-green-700 font-bold">${money(num(f.valor))}</td>
+                            <td class="py-2 px-2 text-right"><button type="button" data-id="${id}" onclick="excluirFita(this.dataset.id)" class="text-red-500 font-bold hover:underline">Excluir</button></td>
+                        </tr>`;
+                    }).join('');
+                    return true;
+                };
+            }
+
+            if (typeof w.renderizarMateriais !== 'function') {
+                w.renderizarMateriais = function() {
+                    const tbody = document.getElementById('tabelaMateriais');
+                    if (!tbody) return true;
+                    const lista = arr('materiais');
+                    if (!lista.length) {
+                        tbody.innerHTML = '<tr><td colspan="4" class="py-6 px-2 text-center text-gray-500">Nenhum material cadastrado.</td></tr>';
+                        return true;
+                    }
+                    tbody.innerHTML = lista.map(function(m) {
+                        const id = idSeguro(m.id || (m.nome + '_' + m.espessura) || w.gerarId());
+                        return `<tr>
+                            <td class="py-2 px-2 font-bold text-gray-800">${esc(m.nome || '')}</td>
+                            <td class="py-2 px-2">${esc(m.espessura || '')}mm</td>
+                            <td class="py-2 px-2 text-green-700 font-bold">${money(num(m.valor))}</td>
+                            <td class="py-2 px-2 text-right"><button type="button" data-id="${id}" onclick="excluirMaterial(this.dataset.id)" class="text-red-500 font-bold hover:underline">Excluir</button></td>
+                        </tr>`;
+                    }).join('');
+                    return true;
+                };
+            }
+
+            if (typeof w.renderizarDicionario !== 'function') {
+                w.renderizarDicionario = function() {
+                    const tbody = document.getElementById('tabelaDicionario');
+                    if (!tbody) return true;
+                    const lista = arr('dicionarioMateriais');
+                    if (!lista.length) {
+                        tbody.innerHTML = '<tr><td colspan="3" class="py-4 px-2 text-center text-gray-500">Nenhum mapeamento cadastrado.</td></tr>';
+                        return true;
+                    }
+                    tbody.innerHTML = lista.map(function(d, idx) {
+                        return `<tr>
+                            <td class="py-2 px-2 font-bold">${esc(d.promob || d.nome || '')}</td>
+                            <td class="py-2 px-2">${esc(d.idLocal || '')}</td>
+                            <td class="py-2 px-2 text-right"><button type="button" data-id="${idx}" onclick="excluirMapeamento(this.dataset.id)" class="text-red-500 font-bold hover:underline">Excluir</button></td>
+                        </tr>`;
+                    }).join('');
+                    return true;
+                };
+            }
+
+            if (typeof w.renderizarProjetos !== 'function') {
+                w.renderizarProjetos = function() {
+                    const tbody = document.getElementById('tabelaMeusProjetos');
+                    if (!tbody) return true;
+                    const lista = arr('projetos');
+                    if (!lista.length) {
+                        tbody.innerHTML = '<tr><td colspan="4" class="px-6 py-6 text-center text-gray-500">Nenhum projeto cadastrado.</td></tr>';
+                        return true;
+                    }
+                    tbody.innerHTML = lista.map(function(p) {
+                        const id = idSeguro(p.id || p.nome || w.gerarId());
+                        const qtd = Array.isArray(p.pecas) ? p.pecas.length : 0;
+                        return `<tr>
+                            <td class="px-6 py-4 font-bold">${esc(p.nome || 'Projeto')}</td>
+                            <td class="px-6 py-4">${esc(p.data || '')}</td>
+                            <td class="px-6 py-4">${qtd} peças</td>
+                            <td class="px-6 py-4 text-right">
+                                <button type="button" data-id="${id}" onclick="abrirProjeto(this.dataset.id)" class="text-blue-600 font-bold mr-3">Abrir</button>
+                                <button type="button" data-id="${id}" onclick="excluirProjeto(this.dataset.id)" class="text-red-600 font-bold">Excluir</button>
+                            </td>
+                        </tr>`;
+                    }).join('');
+                    return true;
+                };
+            }
+
+            if (typeof w.preencherSelectsProjeto !== 'function') {
+                w.preencherSelectsProjeto = function() {
+                    try {
+                        const matOpts = '<option value="">(Selecione)</option>' + arr('materiais').map(function(m) {
+                            const id = esc(m.id || (m.nome + '|' + m.espessura));
+                            return `<option value="${id}">${esc((m.nome || 'Material') + ' ' + (m.espessura ? m.espessura + 'mm' : ''))}</option>`;
+                        }).join('');
+                        document.querySelectorAll('select').forEach(function(sel) {
+                            const sid = normalizar(sel.id || sel.name || '');
+                            if ((sid.includes('material') || sid.includes('chapa')) && arr('materiais').length) {
+                                const atual = sel.value;
+                                sel.innerHTML = matOpts;
+                                if (atual) sel.value = atual;
+                            }
+                        });
+                        return true;
+                    } catch(e) {
+                        console.warn('preencherSelectsProjeto falhou:', e);
+                        return false;
+                    }
+                };
+            }
+
+            if (typeof w.inicializarBancoPadrao !== 'function') {
+                w.inicializarBancoPadrao = function() {
+                    try {
+                        const chaves = {
+                            materiais: 'marcenaria_materiais',
+                            fitas: 'marcenaria_fitas',
+                            ferragens: 'marcenaria_ferragens',
+                            dicionario: 'marcenaria_dicionario',
+                            projetos: 'marcenaria_projetos'
+                        };
+                        function ler(chave, atual) {
+                            try {
+                                const bruto = localStorage.getItem(chave);
+                                if (!bruto) return atual;
+                                const dados = JSON.parse(bruto);
+                                return Array.isArray(dados) ? dados : atual;
+                            } catch(e) { return atual; }
+                        }
+                        w.materiais = ler(chaves.materiais, arr('materiais'));
+                        w.fitas = ler(chaves.fitas, arr('fitas'));
+                        w.ferragens = ler(chaves.ferragens, arr('ferragens'));
+                        w.dicionarioMateriais = ler(chaves.dicionario, arr('dicionarioMateriais'));
+                        w.projetos = ler(chaves.projetos, arr('projetos'));
+                        w.renderizarMateriais();
+                        w.renderizarFitas();
+                        w.renderizarFerragens();
+                        w.renderizarDicionario();
+                        w.renderizarProjetos();
+                        w.preencherSelectsProjeto();
+                        return true;
+                    } catch(e) {
+                        console.warn('inicializarBancoPadrao falhou:', e);
+                        return false;
+                    }
+                };
+            }
+
+            if (typeof w.migrarIds !== 'function') {
+                w.migrarIds = function() {
+                    function garantir(nomeLista, prefixo) {
+                        return arr(nomeLista).map(function(item, idx) {
+                            if (!item || typeof item !== 'object') item = {};
+                            if (!item.id) item.id = prefixo + '_' + Date.now().toString(36) + '_' + idx + '_' + Math.random().toString(36).slice(2, 8);
+                            return item;
+                        });
+                    }
+                    try {
+                        w.materiais = garantir('materiais', 'mat');
+                        w.fitas = garantir('fitas', 'fita');
+                        w.ferragens = garantir('ferragens', 'fer');
+                        w.dicionarioMateriais = garantir('dicionarioMateriais', 'dic');
+                        w.projetos = garantir('projetos', 'proj');
+                        return true;
+                    } catch(e) {
+                        console.warn('migrarIds falhou:', e);
+                        return false;
+                    }
+                };
+            }
+
+            const nomes = [
+                'verificarVersaoOnline','mostrarBannerAtualizacaoPwa','atualizarPwaAgora','registrarServiceWorkerPwa',
+                'renderizarFerragens','renderizarFitas','renderizarMateriais','renderizarDicionario','renderizarProjetos',
+                'preencherSelectsProjeto','inicializarBancoPadrao','migrarIds','excluirFerragem','excluirFita','excluirMaterial','excluirMapeamento'
+            ];
+
+            nomes.forEach(function(nome) {
+                try {
+                    window[nome] = w[nome];
+                } catch(e) {}
+            });
+        })(window);
+        // FIM SAFE BOOTSTRAP
+
+
+
+        // =========================================================================
+        // ATUALIZAÇÃO ONLINE / PWA - carregamento seguro
+        // =========================================================================
+        function mostrarBannerAtualizacaoPwa() {
+            try {
+                const banner = document.getElementById('pwaUpdateBanner');
+                if (banner) banner.style.display = 'block';
+            } catch (erro) {
+                console.warn('Não foi possível mostrar banner de atualização:', erro);
+            }
+        }
+
+        function atualizarPwaAgora() {
+            try {
+                if (window.pwaNovoWorker && typeof window.pwaNovoWorker.postMessage === 'function') {
+                    window.pwaNovoWorker.postMessage({ type: 'SKIP_WAITING' });
+                } else {
+                    window.location.reload();
+                }
+            } catch (erro) {
+                window.location.reload();
+            }
+        }
+
+        function registrarServiceWorkerPwa() {
+            try {
+                if (!('serviceWorker' in navigator)) return false;
+
+                navigator.serviceWorker.register('./service-worker.js').then(function(reg) {
+                    reg.addEventListener('updatefound', function() {
+                        const novoWorker = reg.installing;
+                        if (!novoWorker) return;
+
+                        novoWorker.addEventListener('statechange', function() {
+                            if (novoWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                                window.pwaNovoWorker = novoWorker;
+                                mostrarBannerAtualizacaoPwa();
+                            }
+                        });
+                    });
+                }).catch(function(err) {
+                    console.warn('Service worker não registrado:', err);
+                });
+
+                navigator.serviceWorker.addEventListener('controllerchange', function() {
+                    window.location.reload();
+                });
+
+                return true;
+            } catch (erro) {
+                console.warn('Erro ao registrar service worker:', erro);
+                return false;
+            }
+        }
+
+        function verificarVersaoOnline() {
+            try {
+                if (typeof fetch !== 'function') {
+                    alert('Verificação de atualização indisponível neste navegador.');
+                    return false;
+                }
+
+                fetch('./version.json?ts=' + Date.now(), { cache: 'no-store' })
+                    .then(function(r) { return r.json(); })
+                    .then(function(info) {
+                        const versaoNova = info && info.version ? String(info.version) : '';
+                        const versaoAtual = localStorage.getItem('marcenaria_app_version') || '';
+
+                        if (!versaoNova) {
+                            alert('Não foi possível identificar a versão publicada.');
+                            return;
+                        }
+
+                        if (!versaoAtual) {
+                            localStorage.setItem('marcenaria_app_version', versaoNova);
+                            alert('Versão atual registrada: ' + versaoNova);
+                            return;
+                        }
+
+                        if (versaoNova !== versaoAtual) {
+                            localStorage.setItem('marcenaria_app_version', versaoNova);
+                            mostrarBannerAtualizacaoPwa();
+                            alert('Atualização encontrada: ' + versaoNova);
+                        } else {
+                            alert('Você já está na versão mais recente: ' + versaoNova);
+                        }
+                    })
+                    .catch(function() {
+                        alert('Não foi possível verificar atualização agora.');
+                    });
+
+                return true;
+            } catch (erro) {
+                console.warn('Erro em verificarVersaoOnline:', erro);
+                alert('Erro ao verificar atualização.');
+                return false;
+            }
+        }
+
+
 
         // =========================================================================
         // SELECTS DO PROJETO - função segura para inicialização
