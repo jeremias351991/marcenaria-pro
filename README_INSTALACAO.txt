@@ -1,15 +1,18 @@
-MARCENARIA PRO - PWA v2026.06.06.11
+MARCENARIA PRO - PWA v2026.06.06.12
 
-Correção:
-- encontrarMaterialMapeado() declarado no início do sistema.
-- Aliases adicionados: buscarMaterialMapeado() e obterMaterialMapeado().
-- A função consulta o dicionário de mapeamento e, se necessário, busca material por aproximação de nome e espessura.
+Correção estrutural:
+- Corrigido código que estava dentro de script externo e era ignorado pelo navegador.
+- Corrigido baixarArquivo().
+- Corrigidos botões de excluir/alterar projetos.
+- Corrigido Gerar CSV.
+- Corrigidos botões de alterar/excluir peças.
+- Corrigidos botões de excluir/alterar no banco de materiais.
 - Não apaga dados.
 
-Para atualizar no GitHub Pages:
-1. Substitua index.html.
-2. Substitua version.json.
-3. Substitua service-worker.js.
-4. Aguarde o GitHub Pages publicar.
-5. Teste com ?v=11.
-6. Se persistir erro antigo, limpe os dados/cache do site no Chrome.
+Substitua no GitHub:
+index.html
+version.json
+service-worker.js
+
+Teste:
+https://jeremias351991.github.io/marcenaria-pro/?v=12

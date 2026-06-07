@@ -1,6 +1,6 @@
 {
-  "version": "2026.06.06.11",
+  "version": "2026.06.06.12",
   "name": "Marcenaria Pro",
   "license": "Jeremias Palhão",
-  "notes": "Correção: encontrarMaterialMapeado() e aliases declarados no início do sistema."
+  "notes": "Correção estrutural: scripts externos limpos, bootstrap real, baixarArquivo, CSV e botões de excluir/alterar estabilizados."
 }

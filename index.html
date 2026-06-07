@@ -4,52 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Gestão de Marcenaria Pro - Sem IA</title>
-    <script src="https://cdn.tailwindcss.com">
-        function projetoAtualSeguro() {
-            if (typeof projetoAtual === 'undefined') {
-                window.projetoAtual = null;
-                return null;
-            }
-            return projetoAtual;
-        }
-
-
-        
-
-
-        
-
-
-        
-
-
-
-        let pwaNovoWorker = null;
-
-        
-
-
-        
-
-
-        
-
-
-        
-
-
-
-        window.addEventListener('load', function() {
-            if (typeof registrarServiceWorkerPwa === 'function') registrarServiceWorkerPwa();
-            if (typeof verificarVersaoOnline === 'function') verificarVersaoOnline();
-        });
-
-
-        if (typeof window.preencherSelectsProjeto !== 'function') window.preencherSelectsProjeto = preencherSelectsProjeto;
-        if (typeof window.atualizarSelectsProjeto !== 'function') window.atualizarSelectsProjeto = atualizarSelectsProjeto;
-        if (typeof window.popularSelectsProjeto !== 'function') window.popularSelectsProjeto = popularSelectsProjeto;
-
-</script>
+    <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
@@ -1113,7 +1068,76 @@ MDF Carvalho;18;245.00"></textarea>
         </section>
     </main>
 
-    <script>
+    
+<script id="safe-early-v12">
+(function(w){
+  function arr(name){ return Array.isArray(w[name]) ? w[name] : []; }
+  function norm(v){ try { return String(v ?? '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim(); } catch(e){ return String(v ?? '').toLowerCase().trim(); } }
+  function num(v,d=0){ if(v===null||v===undefined||v==='') return d; let s=String(v).trim().replace(/[R$\s]/g,''); if(s.includes(',')&&s.includes('.')) s=s.replace(/\./g,'').replace(',','.'); else s=s.replace(',','.'); const n=parseFloat(s); return Number.isFinite(n)?n:d; }
+  function money(v){ return (Number(v)||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'}); }
+  function esc(v){ return String(v ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#039;'); }
+  function id(){ return 'id_'+Date.now().toString(36)+'_'+Math.random().toString(36).slice(2,10); }
+
+  if(typeof w.materiais==='undefined') w.materiais=[];
+  if(typeof w.fitas==='undefined') w.fitas=[];
+  if(typeof w.ferragens==='undefined') w.ferragens=[];
+  if(typeof w.dicionarioMateriais==='undefined') w.dicionarioMateriais=[];
+  if(typeof w.projetos==='undefined') w.projetos=[];
+  if(typeof w.projetoAtual==='undefined') w.projetoAtual=null;
+
+  w.htmlEscape = w.htmlEscape || esc;
+  w.normalizarTexto = w.normalizarTexto || norm;
+  w.numero = w.numero || num;
+  w.moeda = w.moeda || money;
+  w.gerarId = w.gerarId || id;
+  w.nomeArquivoSeguro = w.nomeArquivoSeguro || function(nome){ return norm(nome || 'arquivo').replace(/[^a-z0-9]+/g,'_').replace(/^_+|_+$/g,'') || 'arquivo'; };
+
+  w.baixarArquivo = w.baixarArquivo || function(nome, conteudo, tipo){
+    try{
+      const blob = new Blob([conteudo ?? ''], {type: tipo || 'text/plain;charset=utf-8'});
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = nome || 'arquivo.txt';
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(function(){ URL.revokeObjectURL(a.href); },1000);
+    }catch(e){ alert('Não foi possível baixar o arquivo: '+e.message); }
+  };
+
+  w.verificarVersaoOnline = w.verificarVersaoOnline || function(){
+    if(typeof fetch !== 'function') return alert('Atualização indisponível neste navegador.');
+    fetch('./version.json?ts='+Date.now(), {cache:'no-store'}).then(function(r){return r.json();}).then(function(info){
+      const nova = String((info && info.version) || '');
+      if(!nova) return alert('Não foi possível identificar a versão publicada.');
+      localStorage.setItem('marcenaria_app_version', nova);
+      alert('Versão publicada: '+nova);
+    }).catch(function(){ alert('Não foi possível verificar atualização agora.'); });
+  };
+
+  w.atualizarPwaAgora = w.atualizarPwaAgora || function(){ location.reload(); };
+  w.mostrarBannerAtualizacaoPwa = w.mostrarBannerAtualizacaoPwa || function(){ const b=document.getElementById('pwaUpdateBanner'); if(b) b.style.display='block'; };
+  w.registrarServiceWorkerPwa = w.registrarServiceWorkerPwa || function(){ if(!('serviceWorker' in navigator)) return false; navigator.serviceWorker.register('./service-worker.js').catch(function(e){console.warn(e);}); return true; };
+
+  w.encontrarMaterialPorId = w.encontrarMaterialPorId || function(idMaterial){ return arr('materiais').find(function(m){return String(m.id)===String(idMaterial);}) || null; };
+  w.encontrarMaterialMapeado = w.encontrarMaterialMapeado || function(nomeExterno, espessura){
+    const alvo = norm(nomeExterno); const esp = num(espessura,0); const mats = arr('materiais'); const dic = arr('dicionarioMateriais');
+    const mapa = dic.find(function(d){ const p=norm(d.promob || d.externo || d.nomeExterno || d.nome || ''); return p && (p===alvo || alvo.includes(p) || p.includes(alvo)); });
+    if(mapa){ const idLocal=String(mapa.idLocal || mapa.materialId || mapa.id_material || mapa.idMaterial || ''); const porId=mats.find(function(m){return String(m.id||'')===idLocal;}); if(porId) return porId; }
+    let candidatos = esp ? mats.filter(function(m){return num(m.espessura || m.esp,0)===esp;}) : mats.slice();
+    if(!candidatos.length) candidatos=mats.slice();
+    return candidatos.find(function(m){return norm(m.nome||'')===alvo;}) || candidatos.find(function(m){return alvo.includes(norm(m.nome||'')) || norm(m.nome||'').includes(alvo);}) || null;
+  };
+  w.buscarMaterialMapeado = w.buscarMaterialMapeado || w.encontrarMaterialMapeado;
+  w.obterMaterialMapeado = w.obterMaterialMapeado || w.encontrarMaterialMapeado;
+
+  ['renderizarFerragens','renderizarFitas','renderizarMateriais','renderizarDicionario','renderizarProjetos','renderizarPecas','preencherSelectsProjeto','renderizarPlanoCorte'].forEach(function(fn){ w[fn] = w[fn] || function(){ return true; }; });
+  w.inicializarBancoPadrao = w.inicializarBancoPadrao || function(){ return true; };
+  w.migrarIds = w.migrarIds || function(){ return true; };
+})(window);
+</script>
+
+<script>
 
         // =========================================================================
         // SAFE MAPEAMENTO V11 - material mapeado antes de qualquer leitura de projeto
@@ -5503,5 +5527,97 @@ function excluirItemMaterial(id) {
             excluirMaterial(id);
         }
 </script>
+
+<script id="final-override-v12">
+(function(w){
+  const K = { materiais:'marcenaria_materiais', fitas:'marcenaria_fitas', ferragens:'marcenaria_ferragens', dicionario:'marcenaria_dicionario', projetos:'marcenaria_projetos' };
+
+  function esc(v){ return String(v ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#039;'); }
+  function norm(v){ try{return String(v ?? '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim();}catch(e){return String(v ?? '').toLowerCase().trim();} }
+  function num(v,d=0){ if(v===null||v===undefined||v==='') return d; let s=String(v).trim().replace(/[R$\s]/g,''); if(!s)return d; if(s.includes(',')&&s.includes('.'))s=s.replace(/\./g,'').replace(',','.'); else s=s.replace(',','.'); const n=parseFloat(s); return Number.isFinite(n)?n:d; }
+  function money(v){ return (Number(v)||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'}); }
+  function id(){ return 'id_'+Date.now().toString(36)+'_'+Math.random().toString(36).slice(2,10); }
+  function read(key){ try{ const d=JSON.parse(localStorage.getItem(key)||'[]'); return Array.isArray(d)?d:[]; }catch(e){return [];} }
+  function write(key,val){ try{ localStorage.setItem(key,JSON.stringify(val)); }catch(e){ alert('Não foi possível salvar no navegador.'); } }
+  function ensure(name,key){ if(!Array.isArray(w[name])) w[name]=read(key); return w[name]; }
+  function save(name,key,val){ w[name]=val; write(key,val); }
+  function syncAll(){ ensure('materiais',K.materiais); ensure('fitas',K.fitas); ensure('ferragens',K.ferragens); ensure('dicionarioMateriais',K.dicionario); ensure('projetos',K.projetos); if(typeof w.projetoAtual==='undefined') w.projetoAtual=null; }
+
+  w.nomeArquivoSeguro = function(nome){ return norm(nome || 'arquivo').replace(/[^a-z0-9]+/g,'_').replace(/^_+|_+$/g,'') || 'arquivo'; };
+  w.baixarArquivo = function(nome, conteudo, tipo){
+    try{ const blob=new Blob([conteudo ?? ''], {type: tipo || 'text/plain;charset=utf-8'}); const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=nome || 'arquivo.txt'; document.body.appendChild(a); a.click(); a.remove(); setTimeout(function(){URL.revokeObjectURL(a.href);},1000); }catch(e){ alert('Não foi possível baixar o arquivo: '+e.message); }
+  };
+  w.csvCampo = function(v){ const s=String(v ?? '').replace(/"/g,'""'); return /[;"\n\r]/.test(s) ? '"' + s + '"' : s; };
+
+  w.renderizarProjetos = function(){
+    syncAll(); const tbody=document.getElementById('tabelaMeusProjetos'); if(!tbody) return; const projetos=ensure('projetos',K.projetos);
+    if(!projetos.length){ tbody.innerHTML='<tr><td colspan="4" class="px-6 py-6 text-center text-gray-500">Nenhum projeto cadastrado.</td></tr>'; return; }
+    tbody.innerHTML=projetos.map(function(p){ if(!p.id)p.id=id(); const qtd=Array.isArray(p.pecas)?p.pecas.length:0; return '<tr><td class="px-6 py-4 font-bold">'+esc(p.nome||'Projeto')+'</td><td class="px-6 py-4">'+esc(p.data||'')+'</td><td class="px-6 py-4">'+qtd+' peças</td><td class="px-6 py-4 text-right whitespace-nowrap"><button type="button" data-id="'+esc(p.id)+'" onclick="abrirProjeto(this.dataset.id)" class="text-blue-600 font-bold mr-3">Abrir</button><button type="button" data-id="'+esc(p.id)+'" onclick="excluirProjeto(this.dataset.id)" class="text-red-600 font-bold">Excluir</button></td></tr>'; }).join('');
+    write(K.projetos,projetos);
+  };
+
+  w.abrirProjeto = function(idProj){
+    syncAll(); const projetos=ensure('projetos',K.projetos); const p=projetos.find(function(x){return String(x.id)===String(idProj);}); if(!p) return alert('Projeto não localizado.');
+    w.projetoAtual=p; const titulo=document.getElementById('tituloProjetoAtivo'); if(titulo) titulo.textContent=p.nome||'Projeto';
+    const criacao=document.getElementById('telaCriacaoProjeto'); const ativo=document.getElementById('telaProjetoAtivo'); if(criacao) criacao.classList.add('hidden'); if(ativo) ativo.classList.remove('hidden');
+    if(typeof w.showTab==='function') w.showTab('projeto'); w.renderizarPecas(); try{ if(typeof w.calcularCustoProjeto==='function') w.calcularCustoProjeto(); }catch(e){}
+  };
+
+  w.excluirProjeto = function(idProj){
+    syncAll(); let projetos=ensure('projetos',K.projetos); const p=projetos.find(function(x){return String(x.id)===String(idProj);}); if(!p) return alert('Projeto não localizado.');
+    if(!confirm('Excluir o projeto "'+(p.nome||'sem nome')+'"?')) return; projetos=projetos.filter(function(x){return String(x.id)!==String(idProj);}); save('projetos',K.projetos,projetos); if(w.projetoAtual && String(w.projetoAtual.id)===String(idProj)) w.projetoAtual=null; w.renderizarProjetos();
+  };
+
+  w.renderizarMateriais = function(){
+    syncAll(); const tbody=document.getElementById('tabelaMateriais'); if(!tbody) return; const materiais=ensure('materiais',K.materiais);
+    if(!materiais.length){ tbody.innerHTML='<tr><td colspan="4" class="py-6 px-2 text-center text-gray-500">Nenhum material cadastrado.</td></tr>'; return; }
+    tbody.innerHTML=materiais.map(function(m){ if(!m.id)m.id=id(); return '<tr><td class="py-2 px-2 font-bold text-gray-800">'+esc(m.nome||'')+'</td><td class="py-2 px-2">'+esc(m.espessura||m.esp||'')+'mm</td><td class="py-2 px-2"><input type="number" step="0.01" value="'+num(m.valor).toFixed(2)+'" data-id="'+esc(m.id)+'" onchange="alterarValorMaterial(this.dataset.id,this.value)" class="w-28 p-1 border rounded text-green-700 font-bold"></td><td class="py-2 px-2 text-right whitespace-nowrap"><button type="button" data-id="'+esc(m.id)+'" onclick="alterarValorMaterialPrompt(this.dataset.id)" class="text-blue-600 font-bold hover:underline mr-2">Alterar</button><button type="button" data-id="'+esc(m.id)+'" onclick="excluirMaterial(this.dataset.id)" class="text-red-500 font-bold hover:underline">Excluir</button></td></tr>'; }).join('');
+    write(K.materiais,materiais);
+  };
+
+  w.alterarValorMaterial = function(idMat,valorNovo){ syncAll(); const materiais=ensure('materiais',K.materiais); const m=materiais.find(function(x){return String(x.id)===String(idMat);}); if(!m)return alert('Material não localizado.'); m.valor=num(valorNovo,m.valor||0); write(K.materiais,materiais); w.renderizarMateriais(); };
+  w.alterarValorMaterialPrompt = function(idMat){ const m=ensure('materiais',K.materiais).find(function(x){return String(x.id)===String(idMat);}); if(!m)return alert('Material não localizado.'); const novo=prompt('Novo valor para '+(m.nome||'material')+':',num(m.valor).toFixed(2)); if(novo!==null) w.alterarValorMaterial(idMat,novo); };
+  w.excluirMaterial = function(idMat){ syncAll(); let materiais=ensure('materiais',K.materiais); const m=materiais.find(function(x){return String(x.id)===String(idMat);}); if(!m)return alert('Material não localizado.'); if(!confirm('Excluir "'+(m.nome||'material')+'"?'))return; materiais=materiais.filter(function(x){return String(x.id)!==String(idMat);}); save('materiais',K.materiais,materiais); w.renderizarMateriais(); w.preencherSelectsProjeto(); };
+
+  function renderListaGenerica(nome,key,tabela,tipo){
+    syncAll(); const tbody=document.getElementById(tabela); if(!tbody)return; const lista=ensure(nome,key);
+    if(!lista.length){ tbody.innerHTML='<tr><td colspan="4" class="py-4 px-2 text-center text-gray-500">Nenhum item cadastrado.</td></tr>'; return; }
+    tbody.innerHTML=lista.map(function(x){ if(!x.id)x.id=id(); const largura=tipo==='fita'?('<td class="py-2 px-2">'+esc(x.largura||'')+'mm</td>'):('<td class="py-2 px-2 text-gray-500 text-xs">'+esc(x.unidade||'Un')+'</td>'); const alt=tipo==='fita'?'alterarValorFita':'alterarValorFerragem'; const altP=tipo==='fita'?'alterarValorFitaPrompt':'alterarValorFerragemPrompt'; const exc=tipo==='fita'?'excluirFita':'excluirFerragem'; return '<tr><td class="py-2 px-2 font-bold text-gray-800">'+esc(x.nome||'')+'</td>'+largura+'<td class="py-2 px-2"><input type="number" step="0.01" value="'+num(x.valor).toFixed(2)+'" data-id="'+esc(x.id)+'" onchange="'+alt+'(this.dataset.id,this.value)" class="w-28 p-1 border rounded text-green-700 font-bold"></td><td class="py-2 px-2 text-right whitespace-nowrap"><button type="button" data-id="'+esc(x.id)+'" onclick="'+altP+'(this.dataset.id)" class="text-blue-600 font-bold hover:underline mr-2">Alterar</button><button type="button" data-id="'+esc(x.id)+'" onclick="'+exc+'(this.dataset.id)" class="text-red-500 font-bold hover:underline">Excluir</button></td></tr>'; }).join('');
+    write(key,lista);
+  }
+  w.renderizarFerragens=function(){renderListaGenerica('ferragens',K.ferragens,'tabelaFerragens','ferragem');};
+  w.renderizarFitas=function(){renderListaGenerica('fitas',K.fitas,'tabelaFitas','fita');};
+  w.alterarValorFerragem=function(idFer,v){const a=ensure('ferragens',K.ferragens); const x=a.find(function(i){return String(i.id)===String(idFer);}); if(!x)return alert('Ferragem não localizada.'); x.valor=num(v,x.valor||0); write(K.ferragens,a); w.renderizarFerragens();};
+  w.alterarValorFerragemPrompt=function(idFer){const x=ensure('ferragens',K.ferragens).find(function(i){return String(i.id)===String(idFer);}); if(!x)return alert('Ferragem não localizada.'); const v=prompt('Novo valor para '+(x.nome||'ferragem')+':',num(x.valor).toFixed(2)); if(v!==null)w.alterarValorFerragem(idFer,v);};
+  w.excluirFerragem=function(idFer){let a=ensure('ferragens',K.ferragens); const x=a.find(function(i){return String(i.id)===String(idFer);}); if(!x)return alert('Ferragem não localizada.'); if(!confirm('Excluir "'+(x.nome||'ferragem')+'"?'))return; a=a.filter(function(i){return String(i.id)!==String(idFer);}); save('ferragens',K.ferragens,a); w.renderizarFerragens();};
+  w.alterarValorFita=function(idFita,v){const a=ensure('fitas',K.fitas); const x=a.find(function(i){return String(i.id)===String(idFita);}); if(!x)return alert('Fita não localizada.'); x.valor=num(v,x.valor||0); write(K.fitas,a); w.renderizarFitas();};
+  w.alterarValorFitaPrompt=function(idFita){const x=ensure('fitas',K.fitas).find(function(i){return String(i.id)===String(idFita);}); if(!x)return alert('Fita não localizada.'); const v=prompt('Novo valor para '+(x.nome||'fita')+':',num(x.valor).toFixed(2)); if(v!==null)w.alterarValorFita(idFita,v);};
+  w.excluirFita=function(idFita){let a=ensure('fitas',K.fitas); const x=a.find(function(i){return String(i.id)===String(idFita);}); if(!x)return alert('Fita não localizada.'); if(!confirm('Excluir "'+(x.nome||'fita')+'"?'))return; a=a.filter(function(i){return String(i.id)!==String(idFita);}); save('fitas',K.fitas,a); w.renderizarFitas();};
+
+  w.renderizarPecas=function(){
+    const tbody=document.getElementById('tabelaPecas'); const p=w.projetoAtual; if(!tbody||!p||!Array.isArray(p.pecas))return;
+    if(!p.pecas.length){tbody.innerHTML='<tr><td colspan="8" class="px-4 py-6 text-center text-gray-500">Nenhuma peça cadastrada.</td></tr>';return;}
+    tbody.innerHTML=p.pecas.map(function(pc,idx){return '<tr><td class="px-3 py-2 font-bold">'+(idx+1)+'</td><td class="px-3 py-2 font-bold">'+esc(pc.nome||pc.nome_peca||'')+'</td><td class="px-3 py-2">'+num(pc.comp)+' x '+num(pc.larg)+'</td><td class="px-3 py-2">'+num(pc.qtd,1)+'</td><td class="px-3 py-2">'+esc(pc.espessura||pc.esp||'')+'mm</td><td class="px-3 py-2">'+esc(pc.material||'')+'</td><td class="px-3 py-2">'+([pc.fita_c1?'C1':'',pc.fita_c2?'C2':'',pc.fita_l1?'L1':'',pc.fita_l2?'L2':''].filter(Boolean).join(', ')||'-')+'</td><td class="px-3 py-2 text-right whitespace-nowrap"><button type="button" data-idx="'+idx+'" onclick="editarPecaProjeto(this.dataset.idx)" class="text-blue-600 font-bold hover:underline mr-2">Alterar</button><button type="button" data-idx="'+idx+'" onclick="excluirPecaProjeto(this.dataset.idx)" class="text-red-600 font-bold hover:underline">Excluir</button></td></tr>';}).join('');
+  };
+  function saveCurrentProject(){syncAll(); const p=w.projetoAtual;if(!p)return; const projetos=ensure('projetos',K.projetos); const i=projetos.findIndex(function(x){return String(x.id)===String(p.id);}); if(i>=0)projetos[i]=p; else projetos.push(p); save('projetos',K.projetos,projetos);}
+  w.salvarProjetoAtual=saveCurrentProject;
+  w.editarPecaProjeto=function(idx){const p=w.projetoAtual; idx=parseInt(idx,10); if(!p||!Array.isArray(p.pecas)||!p.pecas[idx])return alert('Peça não localizada.'); const pc=p.pecas[idx]; const nome=prompt('Nome da peça:',pc.nome||pc.nome_peca||''); if(nome===null)return; const comp=prompt('Comprimento em mm:',pc.comp||''); if(comp===null)return; const larg=prompt('Largura em mm:',pc.larg||''); if(larg===null)return; const qtd=prompt('Quantidade:',pc.qtd||1); if(qtd===null)return; pc.nome=nome.trim()||pc.nome||pc.nome_peca; pc.nome_peca=pc.nome; pc.comp=num(comp,pc.comp); pc.larg=num(larg,pc.larg); pc.qtd=num(qtd,pc.qtd||1); saveCurrentProject(); w.renderizarPecas();};
+  w.excluirPecaProjeto=function(idx){const p=w.projetoAtual; idx=parseInt(idx,10); if(!p||!Array.isArray(p.pecas)||!p.pecas[idx])return alert('Peça não localizada.'); if(!confirm('Excluir a peça "'+(p.pecas[idx].nome||p.pecas[idx].nome_peca||idx+1)+'"?'))return; p.pecas.splice(idx,1); saveCurrentProject(); w.renderizarPecas();};
+
+  w.preencherSelectsProjeto=function(){syncAll(); const materiais=ensure('materiais',K.materiais); const opts='<option value="">(Selecione)</option>'+materiais.map(function(m){return '<option value="'+esc(m.id||'')+'">'+esc((m.nome||'Material')+' '+(m.espessura?m.espessura+'mm':''))+'</option>';}).join(''); document.querySelectorAll('select').forEach(function(sel){const sid=norm(sel.id||sel.name||''); if((sid.includes('material')||sid.includes('chapa'))&&materiais.length){const atual=sel.value;sel.innerHTML=opts;if(atual)sel.value=atual;}});};
+  w.encontrarMaterialPorId=function(idMat){return ensure('materiais',K.materiais).find(function(m){return String(m.id)===String(idMat);})||null;};
+  w.encontrarMaterialMapeado=function(nomeExterno,espessura){const mats=ensure('materiais',K.materiais);const alvo=norm(nomeExterno);const esp=num(espessura,0);let candidatos=esp?mats.filter(function(m){return num(m.espessura||m.esp,0)===esp;}):mats.slice();if(!candidatos.length)candidatos=mats.slice();return candidatos.find(function(m){return norm(m.nome||'')===alvo;})||candidatos.find(function(m){return alvo.includes(norm(m.nome||''))||norm(m.nome||'').includes(alvo);})||null;};
+  w.buscarMaterialMapeado=w.encontrarMaterialMapeado; w.obterMaterialMapeado=w.encontrarMaterialMapeado;
+  w.renderizarPlanoCorte=w.renderizarPlanoCorte||function(){if(typeof w.gerarPlanoCorteVisual==='function')return w.gerarPlanoCorteVisual();};
+  w.exportarOtimizadorCSV=function(){const p=w.projetoAtual;if(!p||!Array.isArray(p.pecas)||!p.pecas.length)return alert('Projeto vazio.');let csv='Peca;Quantidade;Comprimento;Largura;Material;Fita_C1;Fita_C2;Fita_L1;Fita_L2;Observacoes\n';p.pecas.forEach(function(pc){csv+=w.csvCampo(pc.nome||pc.nome_peca||'')+';'+num(pc.qtd,1)+';'+num(pc.comp)+';'+num(pc.larg)+';'+w.csvCampo((pc.material||'')+' '+(pc.espessura||pc.esp||'')+'mm')+';'+(pc.fita_c1?1:0)+';'+(pc.fita_c2?1:0)+';'+(pc.fita_l1?1:0)+';'+(pc.fita_l2?1:0)+';'+(pc.engrossado?'Engrossar':'')+'\n';});w.baixarArquivo('OTIMIZACAO_'+w.nomeArquivoSeguro(p.nome||'projeto')+'.csv','\uFEFF'+csv,'text/csv;charset=utf-8;');};
+  w.gerarCSV=w.exportarOtimizadorCSV; w.exportarCSV=w.exportarOtimizadorCSV;
+  w.verificarVersaoOnline=function(){fetch('./version.json?ts='+Date.now(),{cache:'no-store'}).then(function(r){return r.json();}).then(function(info){const v=String((info&&info.version)||''); if(!v)return alert('Não foi possível identificar a versão publicada.'); localStorage.setItem('marcenaria_app_version',v); alert('Versão publicada: '+v);}).catch(function(){alert('Não foi possível verificar atualização agora.');});};
+  w.inicializarBancoPadrao=function(){syncAll();w.renderizarProjetos();w.renderizarMateriais();w.renderizarFerragens();w.renderizarFitas();w.preencherSelectsProjeto();return true;};
+  w.migrarIds=function(){syncAll();['materiais','fitas','ferragens','projetos'].forEach(function(name){const a=ensure(name,K[name]||K.projetos);a.forEach(function(x){if(x&&typeof x==='object'&&!x.id)x.id=id();});if(K[name])write(K[name],a);});return true;};
+  document.addEventListener('DOMContentLoaded',function(){setTimeout(function(){try{syncAll();w.migrarIds();w.renderizarProjetos();w.renderizarMateriais();w.renderizarFerragens();w.renderizarFitas();w.preencherSelectsProjeto();}catch(e){console.warn('V12 pós-carregamento:',e);}},300);});
+})(window);
+</script>
+
+
 </body>
 </html>

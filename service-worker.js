@@ -1,4 +1,4 @@
-const CACHE_NAME = 'marcenaria-pro-2026-06-06-11';
+const CACHE_NAME = 'marcenaria-pro-2026-06-06-12';
 const APP_SHELL = ['./','./index.html','./manifest.json','./version.json','./icon.svg'];
 
 self.addEventListener('install', event => {
@@ -19,12 +19,10 @@ self.addEventListener('message', event => {
 
 self.addEventListener('fetch', event => {
   if (event.request.method !== 'GET') return;
-
   if (event.request.url.includes('version.json') || event.request.url.includes('index.html')) {
     event.respondWith(fetch(event.request, { cache: 'no-store' }).catch(() => caches.match(event.request)));
     return;
   }
-
   event.respondWith(
     fetch(event.request)
       .then(response => {
