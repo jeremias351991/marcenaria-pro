@@ -1,4 +1,4 @@
-const CACHE_NAME = 'marcenaria-pro-2026-06-06-7';
+const CACHE_NAME = 'marcenaria-pro-2026-06-06-8';
 const APP_SHELL = ['./','./index.html','./manifest.json','./version.json','./icon.svg'];
 
 self.addEventListener('install', event => {

@@ -87,6 +87,11 @@
             if (typeof verificarVersaoOnline === 'function') verificarVersaoOnline();
         });
 
+
+        if (typeof window.preencherSelectsProjeto !== 'function') window.preencherSelectsProjeto = preencherSelectsProjeto;
+        if (typeof window.atualizarSelectsProjeto !== 'function') window.atualizarSelectsProjeto = atualizarSelectsProjeto;
+        if (typeof window.popularSelectsProjeto !== 'function') window.popularSelectsProjeto = popularSelectsProjeto;
+
 </script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
@@ -1152,6 +1157,76 @@ MDF Carvalho;18;245.00"></textarea>
     </main>
 
     <script>
+
+        // =========================================================================
+        // SELECTS DO PROJETO - função segura para inicialização
+        // =========================================================================
+        function preencherSelectsProjeto() {
+            try {
+                const listaMateriais = (typeof materiais !== 'undefined' && Array.isArray(materiais)) ? materiais : [];
+                const listaFerragens = (typeof ferragens !== 'undefined' && Array.isArray(ferragens)) ? ferragens : [];
+                const listaFitas = (typeof fitas !== 'undefined' && Array.isArray(fitas)) ? fitas : [];
+
+                function opt(value, label) {
+                    return `<option value="${String(value ?? '').replace(/"/g, '&quot;')}">${String(label ?? '').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</option>`;
+                }
+
+                const materialOptions = '<option value="">(Selecione)</option>' + listaMateriais.map(m => {
+                    const id = m.id || `${m.nome}|${m.espessura}`;
+                    const label = `${m.nome || 'Material'} ${m.espessura ? m.espessura + 'mm' : ''}`;
+                    return opt(id, label);
+                }).join('');
+
+                const ferragemOptions = '<option value="">(Selecione)</option>' + listaFerragens.map(f => {
+                    const id = f.id || f.nome;
+                    const label = `${f.nome || 'Ferragem'}${f.valor ? ' - ' + (typeof moeda === 'function' ? moeda(f.valor) : 'R$ ' + f.valor) : ''}`;
+                    return opt(id, label);
+                }).join('');
+
+                const fitaOptions = '<option value="">(Selecione)</option>' + listaFitas.map(f => {
+                    const id = f.id || f.nome;
+                    const label = `${f.nome || 'Fita'} ${f.largura ? f.largura + 'mm' : ''}`;
+                    return opt(id, label);
+                }).join('');
+
+                document.querySelectorAll('select').forEach(sel => {
+                    const id = (sel.id || '').toLowerCase();
+                    const name = (sel.name || '').toLowerCase();
+                    const dataTipo = (sel.dataset && sel.dataset.tipo ? sel.dataset.tipo : '').toLowerCase();
+                    const atual = sel.value;
+
+                    const isMaterial = dataTipo.includes('material') || id.includes('material') || name.includes('material') || id.includes('chapa');
+                    const isFerragem = dataTipo.includes('ferragem') || id.includes('ferragem') || name.includes('ferragem') || id.includes('dobradica') || id.includes('corredica') || id.includes('puxador');
+                    const isFita = dataTipo.includes('fita') || id.includes('fita') || name.includes('fita');
+
+                    if (isMaterial && listaMateriais.length) {
+                        sel.innerHTML = materialOptions;
+                        if (atual) sel.value = atual;
+                    } else if (isFerragem && listaFerragens.length) {
+                        sel.innerHTML = ferragemOptions;
+                        if (atual) sel.value = atual;
+                    } else if (isFita && listaFitas.length) {
+                        sel.innerHTML = fitaOptions;
+                        if (atual) sel.value = atual;
+                    }
+                });
+
+                return true;
+            } catch (erro) {
+                console.error('Erro em preencherSelectsProjeto:', erro);
+                return false;
+            }
+        }
+
+        function atualizarSelectsProjeto() {
+            return preencherSelectsProjeto();
+        }
+
+        function popularSelectsProjeto() {
+            return preencherSelectsProjeto();
+        }
+
+
 
         // =========================================================================
         // MIGRAÇÃO SEGURA DE IDs - não apaga dados

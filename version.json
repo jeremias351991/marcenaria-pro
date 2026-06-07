@@ -1,6 +1,6 @@
 {
-  "version": "2026.06.06.7",
+  "version": "2026.06.06.8",
   "name": "Marcenaria Pro",
   "license": "Jeremias Palhão",
-  "notes": "Correção: migrarIds declarado no início do sistema sem apagar dados."
+  "notes": "Correção: preencherSelectsProjeto declarado no início do sistema."
 }
