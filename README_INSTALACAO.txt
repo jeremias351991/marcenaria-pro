@@ -1,12 +1,13 @@
-MARCENARIA PRO - PWA v2026.06.06.6
+MARCENARIA PRO - PWA v2026.06.06.7
 
 Correção:
-- inicializarBancoPadrao declarado no início do primeiro script.
-- sem redeclarar materiais/fitas/ferragens/gastosManuais para evitar conflito com let/const.
-- service-worker com cache novo.
+- migrarIds() declarado no início do sistema.
+- A função só adiciona IDs em registros sem ID.
+- Não apaga materiais, projetos, fitas, ferragens ou gastos.
 
-Se o erro continuar:
-1. Substitua index.html, version.json e service-worker.js no GitHub.
-2. No celular, limpe os dados do site:
-   Chrome > Configurações > Configurações do site > Dados armazenados > seu site > Limpar dados.
-3. Abra o link novamente.
+Para atualizar no GitHub Pages:
+1. Substitua index.html.
+2. Substitua version.json.
+3. Substitua service-worker.js.
+4. Aguarde o GitHub Pages publicar.
+5. Se continuar carregando erro antigo, limpe os dados do site no Chrome.

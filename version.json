@@ -1,6 +1,6 @@
 {
-  "version": "2026.06.06.6",
+  "version": "2026.06.06.7",
   "name": "Marcenaria Pro",
   "license": "Jeremias Palhão",
-  "notes": "Correção limpa: inicializarBancoPadrao no topo sem redeclarar variáveis existentes."
+  "notes": "Correção: migrarIds declarado no início do sistema sem apagar dados."
 }

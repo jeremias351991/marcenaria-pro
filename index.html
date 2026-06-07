@@ -1154,6 +1154,90 @@ MDF Carvalho;18;245.00"></textarea>
     <script>
 
         // =========================================================================
+        // MIGRAÇÃO SEGURA DE IDs - não apaga dados
+        // =========================================================================
+        function garantirIdsArray(lista, prefixo) {
+            if (!Array.isArray(lista)) return [];
+            return lista.map(function(item, idx) {
+                if (!item || typeof item !== 'object') item = {};
+                if (!item.id) {
+                    item.id = String(prefixo || 'id') + '_' + Date.now().toString(36) + '_' + idx + '_' + Math.random().toString(36).slice(2, 8);
+                }
+                return item;
+            });
+        }
+
+        function migrarIds() {
+            try {
+                const chaves = {
+                    materiais: (typeof STORAGE !== 'undefined' && STORAGE.materiais) ? STORAGE.materiais : 'marcenaria_materiais',
+                    fitas: (typeof STORAGE !== 'undefined' && STORAGE.fitas) ? STORAGE.fitas : 'marcenaria_fitas',
+                    ferragens: (typeof STORAGE !== 'undefined' && STORAGE.ferragens) ? STORAGE.ferragens : 'marcenaria_ferragens',
+                    dicionario: (typeof STORAGE !== 'undefined' && STORAGE.dicionario) ? STORAGE.dicionario : 'marcenaria_dicionario',
+                    projetos: (typeof STORAGE !== 'undefined' && STORAGE.projetos) ? STORAGE.projetos : 'marcenaria_projetos'
+                };
+
+                function ler(chave, atual) {
+                    try {
+                        const bruto = localStorage.getItem(chave);
+                        if (!bruto) return Array.isArray(atual) ? atual : [];
+                        const dados = JSON.parse(bruto);
+                        return Array.isArray(dados) ? dados : (Array.isArray(atual) ? atual : []);
+                    } catch(e) {
+                        return Array.isArray(atual) ? atual : [];
+                    }
+                }
+
+                if (typeof materiais !== 'undefined') {
+                    materiais = garantirIdsArray(ler(chaves.materiais, materiais), 'mat');
+                    localStorage.setItem(chaves.materiais, JSON.stringify(materiais));
+                }
+
+                if (typeof fitas !== 'undefined') {
+                    fitas = garantirIdsArray(ler(chaves.fitas, fitas), 'fita');
+                    localStorage.setItem(chaves.fitas, JSON.stringify(fitas));
+                }
+
+                if (typeof ferragens !== 'undefined') {
+                    ferragens = garantirIdsArray(ler(chaves.ferragens, ferragens), 'fer');
+                    localStorage.setItem(chaves.ferragens, JSON.stringify(ferragens));
+                }
+
+                if (typeof dicionarioMateriais !== 'undefined') {
+                    dicionarioMateriais = garantirIdsArray(ler(chaves.dicionario, dicionarioMateriais), 'dic');
+                    localStorage.setItem(chaves.dicionario, JSON.stringify(dicionarioMateriais));
+                }
+
+                if (typeof projetos !== 'undefined') {
+                    projetos = garantirIdsArray(ler(chaves.projetos, projetos), 'proj');
+                    projetos.forEach(function(p) {
+                        if (Array.isArray(p.pecas)) {
+                            p.pecas = garantirIdsArray(p.pecas, 'peca');
+                        }
+                    });
+                    localStorage.setItem(chaves.projetos, JSON.stringify(projetos));
+                }
+
+                if (typeof renderizarMateriais === 'function') renderizarMateriais();
+                if (typeof renderizarFitas === 'function') renderizarFitas();
+                if (typeof renderizarFerragens === 'function') renderizarFerragens();
+                if (typeof renderizarDicionario === 'function') renderizarDicionario();
+                if (typeof renderizarProjetos === 'function') renderizarProjetos();
+
+                return true;
+            } catch (erro) {
+                console.error('Erro em migrarIds:', erro);
+                return false;
+            }
+        }
+
+        function migrarIdsBanco() {
+            return migrarIds();
+        }
+
+
+
+        // =========================================================================
         // BOOTSTRAP CRÍTICO - inicialização segura sem zerar dados
         // =========================================================================
         function inicializarBancoPadrao() {
