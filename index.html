@@ -5618,6 +5618,417 @@ function excluirItemMaterial(id) {
 })(window);
 </script>
 
+<script id="pricing-fix-v13">
+/* PRICING FIX V13: cálculo de preços sempre usando banco salvo no navegador */
+(function(w){
+  const K = {
+    materiais:'marcenaria_materiais',
+    fitas:'marcenaria_fitas',
+    ferragens:'marcenaria_ferragens',
+    projetos:'marcenaria_projetos'
+  };
+
+  function read(key){
+    try{
+      const raw = localStorage.getItem(key);
+      if(!raw) return [];
+      const data = JSON.parse(raw);
+      return Array.isArray(data) ? data : [];
+    }catch(e){ return []; }
+  }
+
+  function write(key,val){
+    try{ localStorage.setItem(key, JSON.stringify(Array.isArray(val)?val:[])); }catch(e){}
+  }
+
+  function num(v,d=0){
+    if(v===null || v===undefined || v==='') return d;
+    let s=String(v).trim().replace(/[R$\s]/g,'');
+    if(!s) return d;
+    if(s.includes(',') && s.includes('.')) s=s.replace(/\./g,'').replace(',','.');
+    else s=s.replace(',','.');
+    const n=parseFloat(s);
+    return Number.isFinite(n) ? n : d;
+  }
+
+  function money(v){
+    return (Number(v)||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
+  }
+
+  function norm(v){
+    try { return String(v ?? '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/ç/g,'c').trim(); }
+    catch(e){ return String(v ?? '').toLowerCase().trim(); }
+  }
+
+  function esc(v){
+    return String(v ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#039;');
+  }
+
+  function syncFromStorage(){
+    const storageMateriais = read(K.materiais);
+    const storageFitas = read(K.fitas);
+    const storageFerragens = read(K.ferragens);
+    const storageProjetos = read(K.projetos);
+
+    if(storageMateriais.length) w.materiais = storageMateriais;
+    else if(Array.isArray(w.materiais) && w.materiais.length) write(K.materiais, w.materiais);
+    else w.materiais = [];
+
+    if(storageFitas.length) w.fitas = storageFitas;
+    else if(Array.isArray(w.fitas) && w.fitas.length) write(K.fitas, w.fitas);
+    else w.fitas = [];
+
+    if(storageFerragens.length) w.ferragens = storageFerragens;
+    else if(Array.isArray(w.ferragens) && w.ferragens.length) write(K.ferragens, w.ferragens);
+    else w.ferragens = [];
+
+    if(storageProjetos.length) w.projetos = storageProjetos;
+    else if(Array.isArray(w.projetos) && w.projetos.length) write(K.projetos, w.projetos);
+    else w.projetos = [];
+
+    return {
+      materiais:w.materiais,
+      fitas:w.fitas,
+      ferragens:w.ferragens,
+      projetos:w.projetos
+    };
+  }
+
+  function areaChapaM2(m){
+    const comp = num(m.comprimento, 2750);
+    const larg = num(m.largura, 1850);
+    return Math.max((comp * larg) / 1000000, 0.0001);
+  }
+
+  function scoreNome(base, candidato){
+    const b = norm(base);
+    const c = norm(candidato);
+    let pontos = 0;
+    if(!b || !c) return 0;
+    if(b === c) pontos += 100;
+    if(b.includes(c) || c.includes(b)) pontos += 30;
+
+    const tokens = b.replace(/\d+\s*mm/g,' ').replace(/[^a-z0-9]+/g,' ').split(/\s+/)
+      .filter(t => t && !['mdf','mdp','chapa','fita','borda','pvc','faces','face','2','mm','de','da','do','para','tx'].includes(t));
+
+    tokens.forEach(t => { if(c.includes(t)) pontos += 8; });
+
+    if(b.includes('branco') && c.includes('branco')) pontos += 20;
+    if(b.includes('cinza') && c.includes('cinza')) pontos += 20;
+    if((b.includes('louro') || b.includes('freijo')) && (c.includes('louro') || c.includes('freijo'))) pontos += 20;
+    if(b.includes('tx') && c.includes('tx')) pontos += 5;
+    if(b.includes('puro') && c.includes('puro')) pontos += 5;
+    return pontos;
+  }
+
+  function buscarMaterial(nome, espessura, idMaterial){
+    const dados = syncFromStorage();
+    const mats = dados.materiais;
+    if(idMaterial){
+      const byId = mats.find(m => String(m.id) === String(idMaterial));
+      if(byId) return byId;
+    }
+
+    const esp = num(espessura, 0);
+    let candidatos = mats.slice();
+    if(esp){
+      const porEsp = candidatos.filter(m => num(m.espessura || m.esp,0) === esp);
+      if(porEsp.length) candidatos = porEsp;
+    }
+
+    let melhor = null, pontos = -1;
+    candidatos.forEach(m => {
+      const p = scoreNome(nome, m.nome || '');
+      if(p > pontos){ pontos = p; melhor = m; }
+    });
+    return pontos > 0 ? melhor : null;
+  }
+
+  function buscarFita(nomeMaterial, largura){
+    const fitas = syncFromStorage().fitas;
+    const larg = num(largura, 0);
+    let candidatos = fitas.slice();
+    if(larg){
+      const porLarg = candidatos.filter(f => num(f.largura,0) === larg);
+      if(porLarg.length) candidatos = porLarg;
+    }
+
+    let melhor = null, pontos = -1;
+    candidatos.forEach(f => {
+      const p = scoreNome(nomeMaterial, f.nome || '');
+      if(p > pontos){ pontos = p; melhor = f; }
+    });
+
+    if(melhor && pontos > 0) return melhor;
+    if(larg){
+      const unica = fitas.filter(f => num(f.largura,0) === larg);
+      if(unica.length === 1) return unica[0];
+    }
+    return melhor;
+  }
+
+  function buscarFerragem(nomeDesejado){
+    const ferragens = syncFromStorage().ferragens;
+    const alvo = norm(nomeDesejado);
+    const medida = (alvo.match(/\b(250|300|350|400|450|500|550|600)\b/) || [null,''])[1];
+    const telesc = alvo.includes('telescop');
+    const oculta = alvo.includes('oculta') || alvo.includes('invisivel');
+    const dobr = alvo.includes('dobradic');
+    const pux = alvo.includes('puxador') || alvo.includes('gola');
+
+    let candidatos = ferragens.slice();
+    if(medida){
+      const c = candidatos.filter(f => norm(f.nome).includes(medida));
+      if(c.length) candidatos = c;
+    }
+    if(telesc){
+      const c = candidatos.filter(f => norm(f.nome).includes('telescop'));
+      if(c.length) candidatos = c;
+    }
+    if(oculta){
+      const c = candidatos.filter(f => norm(f.nome).includes('oculta') || norm(f.nome).includes('invisivel'));
+      if(c.length) candidatos = c;
+    }
+    if(dobr){
+      const c = candidatos.filter(f => norm(f.nome).includes('dobradic'));
+      if(c.length) candidatos = c;
+    }
+    if(pux){
+      const c = candidatos.filter(f => norm(f.nome).includes('puxador') || norm(f.nome).includes('gola'));
+      if(c.length) candidatos = c;
+    }
+
+    let melhor = null, pontos = -1;
+    candidatos.forEach(f => {
+      let p = scoreNome(nomeDesejado, f.nome || '');
+      const n = norm(f.nome || '');
+      if(medida && n.includes(medida)) p += 30;
+      if(telesc && n.includes('telescop')) p += 20;
+      if(oculta && (n.includes('oculta') || n.includes('invisivel'))) p += 20;
+      if(dobr && n.includes('dobradic')) p += 20;
+      if(pux && (n.includes('puxador') || n.includes('gola'))) p += 20;
+      if(p > pontos){ pontos = p; melhor = f; }
+    });
+
+    return pontos > 0 ? melhor : null;
+  }
+
+  function getProjetoAtual(){
+    if(w.projetoAtual && Array.isArray(w.projetoAtual.pecas)) return w.projetoAtual;
+    const projetos = syncFromStorage().projetos;
+    if(w.projetoAtual && w.projetoAtual.id){
+      const p = projetos.find(x => String(x.id) === String(w.projetoAtual.id));
+      if(p) { w.projetoAtual = p; return p; }
+    }
+    return w.projetoAtual || null;
+  }
+
+  function custoPeca(pc, resumo){
+    const qtd = num(pc.qtd, 1);
+    const comp = num(pc.comp || pc.comprimento, 0);
+    const larg = num(pc.larg || pc.largura, 0);
+    const esp = num(pc.espessura || pc.esp, 0);
+    const materialNome = pc.material || pc.nome_material || pc.chapa || '';
+    const engrossado = !!pc.engrossado;
+    const multiplicador = engrossado ? 2 : 1;
+
+    let mdf = 0, fita = 0, ferragem = 0;
+
+    const mat = buscarMaterial(materialNome, esp, pc.id_material || pc.materialId);
+    if(mat && comp && larg){
+      const area = (comp * larg) / 1000000;
+      const areaTotal = area * qtd * multiplicador;
+      const precoM2 = num(mat.valor,0) / areaChapaM2(mat);
+      mdf = areaTotal * precoM2;
+
+      if(resumo){
+        const key = `${mat.nome || materialNome} ${num(mat.espessura || mat.esp || esp)}mm`;
+        if(!resumo.chapas[key]) resumo.chapas[key] = { nome:key, area:0, chapas:0, valor:0 };
+        resumo.chapas[key].area += areaTotal;
+        resumo.chapas[key].valor += mdf;
+        resumo.chapas[key].chapas = Math.ceil(resumo.chapas[key].area / areaChapaM2(mat));
+      }
+    }
+
+    let metros22 = 0;
+    if(pc.fita_c1) metros22 += comp;
+    if(pc.fita_c2) metros22 += comp;
+    if(pc.fita_l1) metros22 += larg;
+    if(pc.fita_l2) metros22 += larg;
+    metros22 = (metros22 / 1000) * qtd;
+
+    const fitasUsar = engrossado ? [{largura:45, metros:metros22}] : [{largura:22, metros:metros22}];
+    fitasUsar.forEach(item => {
+      if(item.metros <= 0) return;
+      const f = buscarFita(materialNome, item.largura);
+      const rolo = f ? Math.max(num(f.rolo,20),1) : 20;
+      const precoMetro = f ? num(f.valor,0) / rolo : 0;
+      const c = item.metros * precoMetro;
+      fita += c;
+
+      if(resumo){
+        const key = f ? `${f.nome} (${num(f.largura)}mm)` : `${materialNome} (${item.largura}mm)`;
+        if(!resumo.fitas[key]) resumo.fitas[key] = { nome:key, metros:0, valor:0 };
+        resumo.fitas[key].metros += item.metros;
+        resumo.fitas[key].valor += c;
+      }
+    });
+
+    const qtdDob = num(pc.qtd_dobradicas || pc.dobradicas, 0);
+    if(qtdDob > 0){
+      const db = buscarFerragem(pc.tipo_dobradica ? `Dobradiça ${pc.tipo_dobradica}` : 'Dobradiça caneco curva 35mm');
+      const c = qtdDob * (db ? num(db.valor,0) : 0);
+      ferragem += c;
+      if(resumo){
+        const key = db ? db.nome : 'Dobradiça';
+        if(!resumo.ferragens[key]) resumo.ferragens[key] = { nome:key, qtd:0, valor:0 };
+        resumo.ferragens[key].qtd += qtdDob;
+        resumo.ferragens[key].valor += c;
+      }
+    }
+
+    const metrosPux = num(pc.metros_puxador || pc.puxador_metros, 0);
+    if(metrosPux > 0){
+      const db = buscarFerragem('puxador gola');
+      let precoMetro = 0;
+      if(db) precoMetro = norm(db.unidade).includes('barra') ? num(db.valor,0)/3 : num(db.valor,0);
+      const c = metrosPux * precoMetro;
+      ferragem += c;
+      if(resumo){
+        const key = db ? db.nome : 'Puxador gola';
+        if(!resumo.ferragens[key]) resumo.ferragens[key] = { nome:key, qtd:0, valor:0, tipo:'m' };
+        resumo.ferragens[key].qtd += metrosPux;
+        resumo.ferragens[key].valor += c;
+      }
+    }
+
+    const qtdCorr = num(pc.qtd_corredicas || pc.corredicas || pc.qtd_corredica, 0);
+    if(qtdCorr > 0 && pc.tipo_corredica && pc.tipo_corredica !== 'Nenhuma'){
+      const nome = `Corrediça ${pc.tipo_corredica} ${num(pc.medida_corredica || pc.corredica_medida,0)}mm`;
+      const db = buscarFerragem(nome);
+      const c = qtdCorr * (db ? num(db.valor,0) : 0);
+      ferragem += c;
+      if(resumo){
+        const key = db ? db.nome : nome;
+        if(!resumo.ferragens[key]) resumo.ferragens[key] = { nome:key, qtd:0, valor:0, tipo:'par' };
+        resumo.ferragens[key].qtd += qtdCorr;
+        resumo.ferragens[key].valor += c;
+      }
+    }
+
+    return {mdf, fita, ferragem, total: mdf+fita+ferragem};
+  }
+
+  function renderResumo(resumo, totais){
+    const destino = document.getElementById('resumoMateriais');
+    if(!destino) return;
+
+    const chapas = Object.values(resumo.chapas);
+    const fitas = Object.values(resumo.fitas);
+    const ferragens = Object.values(resumo.ferragens);
+
+    function blocoChapas(){
+      if(!chapas.length) return '<p class="text-gray-500">Nenhuma chapa calculada.</p>';
+      return chapas.map(r => `<div class="mb-3"><div class="font-bold text-gray-800">${esc(r.nome)}</div><div class="text-gray-600">Qtd: <strong>${Math.ceil(num(r.chapas))} chapas</strong> (${num(r.area).toFixed(2)}m²)</div><div class="text-gray-600">Custo: ${money(r.valor)}</div></div>`).join('');
+    }
+
+    function blocoFitas(){
+      if(!fitas.length) return '<p class="text-gray-500">Nenhuma fita calculada.</p>';
+      return fitas.map(r => `<div class="mb-3"><div class="font-bold text-gray-800">${esc(r.nome)}</div><div class="text-gray-600">Qtd: <strong>${num(r.metros).toFixed(2)} metros</strong></div><div class="text-gray-600">Custo: ${money(r.valor)}</div></div>`).join('');
+    }
+
+    function blocoFerragens(){
+      if(!ferragens.length) return '<p class="text-gray-500">Nenhuma ferragem calculada.</p>';
+      return ferragens.map(r => `<div class="mb-3"><div class="font-bold text-gray-800">${esc(r.nome)}</div><div class="text-gray-600">Qtd: <strong>${num(r.qtd).toFixed(r.tipo==='m'?2:0)}</strong></div><div class="text-gray-600">Custo: ${money(r.valor)}</div></div>`).join('');
+    }
+
+    destino.innerHTML = `
+      <div class="bg-slate-800 text-white rounded-lg shadow p-5 border-l-4 border-blue-500 mb-5">
+        <div class="uppercase text-sm font-black text-gray-300 tracking-wide">Custo Previsto (Total de Materiais)</div>
+        <div class="text-3xl font-black text-green-400 my-2">${money(totais.total)}</div>
+        <div class="text-sm text-gray-300">(MDF: ${money(totais.mdf)} | Fitas: ${money(totais.fita)} | Ferragens: ${money(totais.ferragem)})</div>
+      </div>
+      <div class="bg-white rounded-lg shadow p-5 border-t-4 border-orange-500 mb-5"><h3 class="text-xl font-black text-gray-700 mb-3">📦 Chapas (MDF)</h3><hr class="mb-3">${blocoChapas()}</div>
+      <div class="bg-white rounded-lg shadow p-5 border-t-4 border-yellow-500 mb-5"><h3 class="text-xl font-black text-gray-700 mb-3">🎗️ Fitas de Borda</h3><hr class="mb-3">${blocoFitas()}</div>
+      <div class="bg-white rounded-lg shadow p-5 border-t-4 border-gray-500 mb-5"><h3 class="text-xl font-black text-gray-700 mb-3">🔩 Ferragens</h3><hr class="mb-3">${blocoFerragens()}</div>
+    `;
+  }
+
+  w.calcularCustoProjeto = function(){
+    syncFromStorage();
+    const p = getProjetoAtual();
+    const resumo = {chapas:{}, fitas:{}, ferragens:{}};
+    const totais = {mdf:0, fita:0, ferragem:0, total:0};
+
+    if(!p || !Array.isArray(p.pecas)){
+      renderResumo(resumo, totais);
+      return {custoTotal:0, custoMdf:0, custoFitas:0, custoFerragens:0};
+    }
+
+    p.pecas.forEach(pc => {
+      const c = custoPeca(pc, resumo);
+      totais.mdf += c.mdf;
+      totais.fita += c.fita;
+      totais.ferragem += c.ferragem;
+      totais.total += c.total;
+    });
+
+    const elMdf = document.getElementById('resCustoMdf');
+    const elFitas = document.getElementById('resCustoFitas');
+    const elFerragens = document.getElementById('resCustoFerragens');
+    const elTotal = document.getElementById('resCustoTotal');
+
+    if(elMdf) elMdf.textContent = money(totais.mdf);
+    if(elFitas) elFitas.textContent = money(totais.fita);
+    if(elFerragens) elFerragens.textContent = money(totais.ferragem);
+    if(elTotal) elTotal.textContent = money(totais.total);
+
+    renderResumo(resumo, totais);
+
+    return {custoTotal:totais.total, custoMdf:totais.mdf, custoFitas:totais.fita, custoFerragens:totais.ferragem, resumo};
+  };
+
+  w.custoPecaPorAmbiente = function(pc){
+    syncFromStorage();
+    const c = custoPeca(pc, null);
+    return {mdf:c.mdf, fitas:c.fita, ferragens:c.ferragem, total:c.total};
+  };
+
+  w.atualizarProjetoAposPreco = function(){
+    syncFromStorage();
+    if(typeof w.renderizarPecas === 'function') { try{ w.renderizarPecas(); }catch(e){} }
+    return w.calcularCustoProjeto();
+  };
+
+  w.buscarFitaCompativel = buscarFita;
+  w.buscarFerragemCompativel = buscarFerragem;
+  w.encontrarMaterial = function(nome, esp){ return buscarMaterial(nome, esp); };
+  w.areaChapaM2 = areaChapaM2;
+
+  const oldAbrir = w.abrirProjeto;
+  w.abrirProjeto = function(idProj){
+    if(typeof oldAbrir === 'function') {
+      try { oldAbrir(idProj); } catch(e) {}
+    }
+    syncFromStorage();
+    if(idProj){
+      const p = w.projetos.find(x => String(x.id) === String(idProj));
+      if(p) w.projetoAtual = p;
+    }
+    setTimeout(() => { try{ w.calcularCustoProjeto(); }catch(e){} }, 100);
+  };
+
+  document.addEventListener('DOMContentLoaded', function(){
+    setTimeout(function(){
+      syncFromStorage();
+      try{ w.calcularCustoProjeto(); }catch(e){}
+    }, 700);
+  });
+})(window);
+</script>
+
+
+
 
 </body>
 </html>

@@ -1,13 +1,10 @@
-MARCENARIA PRO - PWA v2026.06.06.12
+MARCENARIA PRO - PWA v2026.06.06.13
 
-Correção estrutural:
-- Corrigido código que estava dentro de script externo e era ignorado pelo navegador.
-- Corrigido baixarArquivo().
-- Corrigidos botões de excluir/alterar projetos.
-- Corrigido Gerar CSV.
-- Corrigidos botões de alterar/excluir peças.
-- Corrigidos botões de excluir/alterar no banco de materiais.
-- Não apaga dados.
+Correção:
+- Preços não ficam mais zerados quando existem materiais, fitas e ferragens no banco.
+- O cálculo agora lê o banco salvo no navegador diretamente.
+- Recalcula MDF, fitas, ferragens, dobradiças, puxador gola e corrediças.
+- Reforça Controle de Gastos usando a mesma lógica.
 
 Substitua no GitHub:
 index.html
@@ -15,4 +12,4 @@ version.json
 service-worker.js
 
 Teste:
-https://jeremias351991.github.io/marcenaria-pro/?v=12
+https://jeremias351991.github.io/marcenaria-pro/?v=13

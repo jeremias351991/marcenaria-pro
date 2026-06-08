@@ -1,6 +1,6 @@
 {
-  "version": "2026.06.06.12",
+  "version": "2026.06.06.13",
   "name": "Marcenaria Pro",
   "license": "Jeremias Palhão",
-  "notes": "Correção estrutural: scripts externos limpos, bootstrap real, baixarArquivo, CSV e botões de excluir/alterar estabilizados."
+  "notes": "Correção de preços: cálculo busca MDF, fitas e ferragens direto do banco salvo no navegador."
 }
