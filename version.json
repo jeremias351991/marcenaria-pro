@@ -1,6 +1,6 @@
 {
-  "version": "2026.06.06.15",
+  "version": "2026.06.06.16",
   "name": "Marcenaria Pro",
   "license": "Jeremias Palhão",
-  "notes": "Correção: persistência forte do banco de materiais e opção de largura de fitas 22/45/64mm."
+  "notes": "Adicionado editor completo de peça: nome, material, espessura, fitas, cor da fita, puxador, dobradiças, corrediças e ferragens."
 }

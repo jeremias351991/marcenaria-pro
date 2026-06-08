@@ -6411,6 +6411,689 @@ function excluirItemMaterial(id) {
 })(window);
 </script>
 
+<script id="editor-completo-projeto-v16">
+/* V16 - Editor completo de peças do projeto */
+(function(w){
+  const K = {
+    projetos:'marcenaria_projetos',
+    materiais:'marcenaria_materiais',
+    fitas:'marcenaria_fitas',
+    ferragens:'marcenaria_ferragens'
+  };
+
+  let indiceEdicaoV16 = null;
+
+  function read(key){
+    try{
+      const data = JSON.parse(localStorage.getItem(key) || '[]');
+      return Array.isArray(data) ? data : [];
+    }catch(e){ return []; }
+  }
+
+  function write(key, value){
+    try{ localStorage.setItem(key, JSON.stringify(Array.isArray(value) ? value : [])); }
+    catch(e){ alert('Não foi possível salvar no navegador.'); }
+  }
+
+  function esc(v){
+    return String(v ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#039;');
+  }
+
+  function num(v,d=0){
+    if(v===null || v===undefined || v==='') return d;
+    let s = String(v).trim().replace(/[R$\s]/g,'').replace(/mm/ig,'');
+    if(!s) return d;
+    if(s.includes(',') && s.includes('.')) s=s.replace(/\./g,'').replace(',','.');
+    else s=s.replace(',','.');
+    const n = parseFloat(s);
+    return Number.isFinite(n) ? n : d;
+  }
+
+  function norm(v){
+    try{return String(v ?? '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim();}
+    catch(e){return String(v ?? '').toLowerCase().trim();}
+  }
+
+  function id(){
+    return 'id_'+Date.now().toString(36)+'_'+Math.random().toString(36).slice(2,10);
+  }
+
+  function carregar(){
+    const ps = read(K.projetos);
+    const ms = read(K.materiais);
+    const fs = read(K.fitas);
+    const hs = read(K.ferragens);
+
+    if(ps.length) w.projetos = ps;
+    if(ms.length) w.materiais = ms;
+    if(fs.length) w.fitas = fs;
+    if(hs.length) w.ferragens = hs;
+
+    if(!Array.isArray(w.projetos)) w.projetos = [];
+    if(!Array.isArray(w.materiais)) w.materiais = [];
+    if(!Array.isArray(w.fitas)) w.fitas = [];
+    if(!Array.isArray(w.ferragens)) w.ferragens = [];
+  }
+
+  function projetoAtual(){
+    carregar();
+    if(w.projetoAtual && Array.isArray(w.projetoAtual.pecas)) return w.projetoAtual;
+
+    if(w.projetoAtual && w.projetoAtual.id){
+      const p = w.projetos.find(x => String(x.id) === String(w.projetoAtual.id));
+      if(p){ w.projetoAtual = p; return p; }
+    }
+
+    if(w.projetos.length === 1){
+      w.projetoAtual = w.projetos[0];
+      if(!Array.isArray(w.projetoAtual.pecas)) w.projetoAtual.pecas = [];
+      return w.projetoAtual;
+    }
+
+    return null;
+  }
+
+  function salvarProjetoAtual(){
+    carregar();
+    const p = projetoAtual();
+    if(!p) return false;
+    if(!p.id) p.id = id();
+    if(!Array.isArray(p.pecas)) p.pecas = [];
+    const i = w.projetos.findIndex(x => String(x.id) === String(p.id));
+    if(i >= 0) w.projetos[i] = p;
+    else w.projetos.push(p);
+    write(K.projetos, w.projetos);
+    return true;
+  }
+
+  function opt(value, label, selected){
+    return `<option value="${esc(value)}" ${selected?'selected':''}>${esc(label)}</option>`;
+  }
+
+  function materialOptions(selected){
+    carregar();
+    let html = opt('', '(Selecione)', !selected);
+    w.materiais.forEach(m => {
+      if(!m.id) m.id = id();
+      const label = `${m.nome || 'Material'} ${m.espessura || m.esp || ''}${(m.espessura || m.esp) ? 'mm' : ''}`;
+      html += opt(m.id, label, String(selected||'') === String(m.id));
+    });
+    return html;
+  }
+
+  function fitaOptions(selected){
+    carregar();
+    let html = opt('', '(Sem fita vinculada)', !selected);
+    w.fitas.forEach(f => {
+      if(!f.id) f.id = id();
+      const label = `${f.nome || 'Fita'} ${f.largura || f.larg || ''}${(f.largura || f.larg) ? 'mm' : ''}`;
+      html += opt(f.id, label, String(selected||'') === String(f.id));
+    });
+    return html;
+  }
+
+  function ferragemOptions(selected, filtro){
+    carregar();
+    let html = opt('', '(Selecione)', !selected);
+    const fNorm = norm(filtro || '');
+    w.ferragens
+      .filter(f => !fNorm || norm(f.nome || '').includes(fNorm))
+      .forEach(f => {
+        if(!f.id) f.id = id();
+        html += opt(f.id, f.nome || 'Ferragem', String(selected||'') === String(f.id));
+      });
+    return html;
+  }
+
+  function buscarMaterial(idMat){
+    carregar();
+    return w.materiais.find(m => String(m.id) === String(idMat)) || null;
+  }
+
+  function buscarFita(idFita){
+    carregar();
+    return w.fitas.find(f => String(f.id) === String(idFita)) || null;
+  }
+
+  function buscarFerragem(idFer){
+    carregar();
+    return w.ferragens.find(f => String(f.id) === String(idFer)) || null;
+  }
+
+  function valorCampo(idCampo, valor=''){
+    const el = document.getElementById(idCampo);
+    if(el) el.value = valor ?? '';
+  }
+
+  function checkedCampo(idCampo, valor=false){
+    const el = document.getElementById(idCampo);
+    if(el) el.checked = !!valor;
+  }
+
+  function criarModal(){
+    if(document.getElementById('modalEditorPecaV16')) return;
+
+    const modal = document.createElement('div');
+    modal.id = 'modalEditorPecaV16';
+    modal.style.display = 'none';
+    modal.className = 'fixed inset-0 z-[99999] bg-black/60 p-3 overflow-y-auto';
+    modal.innerHTML = `
+      <div class="bg-white max-w-6xl mx-auto my-4 rounded-xl shadow-2xl border-t-4 border-blue-600">
+        <div class="p-4 border-b flex items-center justify-between gap-3 sticky top-0 bg-white z-10">
+          <div>
+            <h2 class="text-xl font-black text-gray-800">✏️ Alterar Peça Completa</h2>
+            <p class="text-xs text-gray-500">Edite nome, material, espessura, fitas, puxador, dobradiças, corrediças e ferragens.</p>
+          </div>
+          <button type="button" onclick="fecharEditorPecaCompleta()" class="bg-gray-200 px-4 py-2 rounded font-bold">Fechar</button>
+        </div>
+
+        <div class="p-4 grid grid-cols-1 md:grid-cols-12 gap-4">
+          <div class="md:col-span-3">
+            <label class="text-xs font-black uppercase text-gray-500">Ambiente</label>
+            <input id="eAmbiente" class="w-full p-2 border rounded" placeholder="Cozinha, quarto...">
+          </div>
+          <div class="md:col-span-5">
+            <label class="text-xs font-black uppercase text-gray-500">Nome da peça</label>
+            <input id="eNome" class="w-full p-2 border rounded" placeholder="Frente, Porta, Lateral...">
+          </div>
+          <div class="md:col-span-2">
+            <label class="text-xs font-black uppercase text-gray-500">Quantidade</label>
+            <input id="eQtd" type="number" step="1" class="w-full p-2 border rounded">
+          </div>
+          <div class="md:col-span-1">
+            <label class="text-xs font-black uppercase text-gray-500">C(mm)</label>
+            <input id="eComp" type="number" step="0.01" class="w-full p-2 border rounded">
+          </div>
+          <div class="md:col-span-1">
+            <label class="text-xs font-black uppercase text-gray-500">L(mm)</label>
+            <input id="eLarg" type="number" step="0.01" class="w-full p-2 border rounded">
+          </div>
+
+          <div class="md:col-span-5 bg-blue-50 border rounded p-3">
+            <h3 class="font-black text-blue-900 mb-2">📦 Material / MDF</h3>
+            <label class="text-xs font-black uppercase text-gray-500">Material cadastrado</label>
+            <select id="eMaterialSelect" class="w-full p-2 border rounded bg-white" onchange="aplicarMaterialEditorV16()"></select>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-2 mt-2">
+              <div class="md:col-span-2">
+                <label class="text-xs font-black uppercase text-gray-500">Nome manual do material</label>
+                <input id="eMaterialNome" class="w-full p-2 border rounded" placeholder="Ex: MDF Branco TX">
+              </div>
+              <div>
+                <label class="text-xs font-black uppercase text-gray-500">Espessura</label>
+                <input id="eEspessura" type="number" step="0.01" class="w-full p-2 border rounded" placeholder="15">
+              </div>
+            </div>
+            <label class="mt-2 flex items-center gap-2 text-sm font-bold text-orange-800">
+              <input id="eEngrossado" type="checkbox"> Peça engrossada / duplica chapa
+            </label>
+          </div>
+
+          <div class="md:col-span-7 bg-yellow-50 border rounded p-3">
+            <h3 class="font-black text-yellow-900 mb-2">🎗️ Fitas de borda / cor da fita</h3>
+            <div class="grid grid-cols-2 md:grid-cols-6 gap-2">
+              <label class="font-bold"><input id="eFitaC1" type="checkbox"> C1</label>
+              <label class="font-bold"><input id="eFitaC2" type="checkbox"> C2</label>
+              <label class="font-bold"><input id="eFitaL1" type="checkbox"> L1</label>
+              <label class="font-bold"><input id="eFitaL2" type="checkbox"> L2</label>
+              <select id="eLarguraFita" class="p-2 border rounded">
+                <option value="22">22mm</option>
+                <option value="45">45mm</option>
+                <option value="64">64mm</option>
+              </select>
+              <button type="button" onclick="marcarTodasFitasV16()" class="bg-yellow-600 text-white rounded font-bold">Todas</button>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-2 mt-2">
+              <div>
+                <label class="text-xs font-black uppercase text-gray-500">Fita cadastrada / cor</label>
+                <select id="eFitaSelect" class="w-full p-2 border rounded bg-white" onchange="aplicarFitaEditorV16()"></select>
+              </div>
+              <div>
+                <label class="text-xs font-black uppercase text-gray-500">Cor/nome manual da fita</label>
+                <input id="eCorFita" class="w-full p-2 border rounded" placeholder="Ex: Branco TX, Louro Freijó">
+              </div>
+            </div>
+          </div>
+
+          <div class="md:col-span-4 bg-purple-50 border rounded p-3">
+            <h3 class="font-black text-purple-900 mb-2">📏 Puxador</h3>
+            <label class="text-xs font-black uppercase text-gray-500">Tipo</label>
+            <select id="eTipoPuxador" class="w-full p-2 border rounded bg-white">
+              <option value="Nenhum">Sem puxador</option>
+              <option value="Puxador Gola">Puxador gola</option>
+              <option value="Outro">Outro</option>
+            </select>
+            <div class="grid grid-cols-2 gap-2 mt-2">
+              <div>
+                <label class="text-xs font-black uppercase text-gray-500">Onde vai</label>
+                <select id="ePosicaoPuxador" class="w-full p-2 border rounded bg-white">
+                  <option value="Nenhum">Nenhum</option>
+                  <option value="Comprimento">No comprimento</option>
+                  <option value="Largura">Na largura</option>
+                  <option value="Superior">Superior</option>
+                  <option value="Inferior">Inferior</option>
+                  <option value="Lateral">Lateral</option>
+                </select>
+              </div>
+              <div>
+                <label class="text-xs font-black uppercase text-gray-500">Metros</label>
+                <input id="eMetrosPuxador" type="number" step="0.01" class="w-full p-2 border rounded" placeholder="auto">
+              </div>
+            </div>
+            <label class="text-xs font-black uppercase text-gray-500 mt-2 block">Ferragem puxador</label>
+            <select id="eFerragemPuxador" class="w-full p-2 border rounded bg-white"></select>
+          </div>
+
+          <div class="md:col-span-4 bg-indigo-50 border rounded p-3">
+            <h3 class="font-black text-indigo-900 mb-2">🚪 Dobradiça</h3>
+            <label class="text-xs font-black uppercase text-gray-500">Tipo</label>
+            <select id="eTipoDobradica" class="w-full p-2 border rounded bg-white">
+              <option value="Nenhuma">Sem dobradiça</option>
+              <option value="Reta">Reta</option>
+              <option value="Curva">Curva</option>
+              <option value="Super Curva">Super curva</option>
+              <option value="Outra">Outra</option>
+            </select>
+            <div class="grid grid-cols-2 gap-2 mt-2">
+              <div>
+                <label class="text-xs font-black uppercase text-gray-500">Quantidade</label>
+                <input id="eQtdDobradicas" type="number" step="1" class="w-full p-2 border rounded">
+              </div>
+              <div>
+                <label class="text-xs font-black uppercase text-gray-500">Ferragem</label>
+                <select id="eFerragemDobradica" class="w-full p-2 border rounded bg-white"></select>
+              </div>
+            </div>
+          </div>
+
+          <div class="md:col-span-4 bg-green-50 border rounded p-3">
+            <h3 class="font-black text-green-900 mb-2">🛞 Corrediça / gaveta</h3>
+            <label class="text-xs font-black uppercase text-gray-500">Modelo</label>
+            <select id="eTipoCorredica" class="w-full p-2 border rounded bg-white">
+              <option value="Nenhuma">Sem corrediça</option>
+              <option value="Telescópica">Telescópica</option>
+              <option value="Oculta">Oculta / invisível</option>
+            </select>
+            <div class="grid grid-cols-2 gap-2 mt-2">
+              <div>
+                <label class="text-xs font-black uppercase text-gray-500">Medida</label>
+                <select id="eMedidaCorredica" class="w-full p-2 border rounded bg-white">
+                  <option value="300">30 cm / 300mm</option>
+                  <option value="350">35 cm / 350mm</option>
+                  <option value="400">40 cm / 400mm</option>
+                  <option value="450">45 cm / 450mm</option>
+                  <option value="500">50 cm / 500mm</option>
+                  <option value="550">55 cm / 550mm</option>
+                </select>
+              </div>
+              <div>
+                <label class="text-xs font-black uppercase text-gray-500">Pares</label>
+                <input id="eQtdCorredicas" type="number" step="1" class="w-full p-2 border rounded">
+              </div>
+            </div>
+          </div>
+
+          <div class="md:col-span-6 bg-gray-50 border rounded p-3">
+            <h3 class="font-black text-gray-800 mb-2">🔩 Ferragem extra</h3>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-2">
+              <div class="md:col-span-2">
+                <label class="text-xs font-black uppercase text-gray-500">Ferragem</label>
+                <select id="eFerragemExtra" class="w-full p-2 border rounded bg-white"></select>
+              </div>
+              <div>
+                <label class="text-xs font-black uppercase text-gray-500">Quantidade</label>
+                <input id="eFerragemExtraQtd" type="number" step="0.01" class="w-full p-2 border rounded">
+              </div>
+            </div>
+          </div>
+
+          <div class="md:col-span-6 bg-gray-50 border rounded p-3">
+            <h3 class="font-black text-gray-800 mb-2">📝 Observações</h3>
+            <textarea id="eObservacoes" class="w-full p-2 border rounded min-h-[88px]" placeholder="Qualquer detalhe da peça..."></textarea>
+          </div>
+        </div>
+
+        <div class="p-4 border-t flex flex-col md:flex-row gap-3 justify-end">
+          <button type="button" onclick="excluirPecaEditorAtualV16()" class="bg-red-600 text-white px-5 py-3 rounded font-black">Excluir esta peça</button>
+          <button type="button" onclick="fecharEditorPecaCompleta()" class="bg-gray-300 text-gray-900 px-5 py-3 rounded font-black">Cancelar</button>
+          <button type="button" onclick="salvarEditorPecaCompleta()" class="bg-green-600 text-white px-5 py-3 rounded font-black">Salvar Alterações</button>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(modal);
+  }
+
+  function preencherSelectsModal(pc){
+    document.getElementById('eMaterialSelect').innerHTML = materialOptions(pc.id_material || pc.materialId || '');
+    document.getElementById('eFitaSelect').innerHTML = fitaOptions(pc.id_fita || pc.fitaId || '');
+    document.getElementById('eFerragemExtra').innerHTML = ferragemOptions(pc.ferragem_extra_id || '', '');
+    document.getElementById('eFerragemPuxador').innerHTML = ferragemOptions(pc.ferragem_puxador_id || '', 'puxador');
+    document.getElementById('eFerragemDobradica').innerHTML = ferragemOptions(pc.ferragem_dobradica_id || '', 'dobrad');
+  }
+
+  function mostrarBotaoAdicionar(){
+    if(document.getElementById('btnAdicionarPecaCompletaV16')) return;
+    const titulo = document.getElementById('tituloProjetoAtivo') || document.querySelector('#projeto h2, #projeto h1');
+    if(!titulo) return;
+    const btn = document.createElement('button');
+    btn.id = 'btnAdicionarPecaCompletaV16';
+    btn.type = 'button';
+    btn.onclick = () => w.adicionarPecaCompleta();
+    btn.className = 'ml-2 bg-green-700 text-white px-4 py-2 rounded font-black shadow my-2';
+    btn.textContent = '+ Peça Completa';
+    titulo.parentNode.insertBefore(btn, titulo.nextSibling);
+  }
+
+  function resumoExtras(pc){
+    const extras = [];
+    const fitas = [];
+    if(pc.fita_c1) fitas.push('C1');
+    if(pc.fita_c2) fitas.push('C2');
+    if(pc.fita_l1) fitas.push('L1');
+    if(pc.fita_l2) fitas.push('L2');
+    if(fitas.length) extras.push(`Fita ${pc.largura_fita || pc.fita_largura || 22}mm: ${fitas.join(', ')}`);
+    if(pc.cor_fita) extras.push(`Cor fita: ${pc.cor_fita}`);
+    if(pc.tipo_puxador && pc.tipo_puxador !== 'Nenhum') extras.push(`Puxador: ${pc.tipo_puxador} ${pc.puxador_posicao || pc.lado_puxador || ''} ${pc.metros_puxador ? pc.metros_puxador+'m' : ''}`);
+    if(num(pc.qtd_dobradicas || pc.dobradicas,0)) extras.push(`Dobradiça: ${pc.qtd_dobradicas || pc.dobradicas} ${pc.tipo_dobradica || ''}`);
+    if(num(pc.qtd_corredicas || pc.corredicas,0)) extras.push(`Corrediça: ${pc.qtd_corredicas || pc.corredicas} par ${pc.tipo_corredica || ''} ${pc.medida_corredica || ''}mm`);
+    if(pc.ferragem_extra_nome) extras.push(`Extra: ${pc.ferragem_extra_nome} x${pc.ferragem_extra_qtd || 1}`);
+    return extras.join('<br>') || '-';
+  }
+
+  const renderOriginal = w.renderizarPecas;
+  w.renderizarPecas = function(){
+    const p = projetoAtual();
+    const tbody = document.getElementById('tabelaPecas');
+
+    if(!tbody){
+      if(typeof renderOriginal === 'function') return renderOriginal();
+      return;
+    }
+
+    if(!p || !Array.isArray(p.pecas) || !p.pecas.length){
+      tbody.innerHTML = '<tr><td colspan="7" class="px-4 py-6 text-center text-gray-500">Nenhuma peça cadastrada.</td></tr>';
+      mostrarBotaoAdicionar();
+      return;
+    }
+
+    tbody.innerHTML = p.pecas.map((pc, idx) => {
+      if(!pc.id) pc.id = id();
+      const nome = pc.nome || pc.nome_peca || pc.peca || pc.descricao || `Peça ${idx+1}`;
+      const mat = pc.material || pc.material_nome || pc.nome_material || pc.chapa || '';
+      const esp = pc.espessura || pc.esp || '';
+      const comp = pc.comp || pc.comprimento || pc.length || pc.x || '';
+      const larg = pc.larg || pc.largura || pc.width || pc.y || '';
+      const qtd = pc.qtd || pc.quantidade || pc.qty || 1;
+      return `<tr>
+        <td class="px-4 py-3 text-sm text-gray-600">${esc(pc.ambiente || '')}</td>
+        <td class="px-4 py-3 font-bold text-gray-900">${esc(nome)}</td>
+        <td class="px-4 py-3 text-sm">${esc(mat)} ${esp ? esc(esp)+'mm' : ''}</td>
+        <td class="px-4 py-3 text-sm font-mono">${esc(comp)} x ${esc(larg)}</td>
+        <td class="px-4 py-3 text-xs text-gray-700">${resumoExtras(pc)}</td>
+        <td class="px-4 py-3 text-center font-bold">${esc(qtd)}</td>
+        <td class="px-4 py-3 text-right whitespace-nowrap">
+          <button type="button" data-idx="${idx}" onclick="editarPecaProjeto(this.dataset.idx)" class="text-blue-600 font-black hover:underline mr-3">Alterar tudo</button>
+          <button type="button" data-idx="${idx}" onclick="excluirPecaProjeto(this.dataset.idx)" class="text-red-600 font-black hover:underline">Excluir</button>
+        </td>
+      </tr>`;
+    }).join('');
+
+    salvarProjetoAtual();
+    mostrarBotaoAdicionar();
+  };
+
+  w.adicionarPecaCompleta = function(){
+    const p = projetoAtual();
+    if(!p) return alert('Abra ou crie um projeto primeiro.');
+    if(!Array.isArray(p.pecas)) p.pecas = [];
+    indiceEdicaoV16 = 'nova';
+    abrirModalComPeca({});
+  };
+
+  w.editarPecaCompleta = function(idx){
+    const p = projetoAtual();
+    idx = parseInt(idx,10);
+    if(!p || !Array.isArray(p.pecas) || !p.pecas[idx]) return alert('Peça não localizada.');
+    indiceEdicaoV16 = idx;
+    abrirModalComPeca(p.pecas[idx]);
+  };
+
+  w.editarPecaProjeto = w.editarPecaCompleta;
+
+  function abrirModalComPeca(pc){
+    criarModal();
+    preencherSelectsModal(pc || {});
+
+    valorCampo('eAmbiente', pc.ambiente || '');
+    valorCampo('eNome', pc.nome || pc.nome_peca || pc.peca || pc.descricao || '');
+    valorCampo('eQtd', pc.qtd || pc.quantidade || pc.qty || 1);
+    valorCampo('eComp', pc.comp || pc.comprimento || pc.length || pc.x || '');
+    valorCampo('eLarg', pc.larg || pc.largura || pc.width || pc.y || '');
+
+    valorCampo('eMaterialNome', pc.material || pc.material_nome || pc.nome_material || pc.chapa || '');
+    valorCampo('eEspessura', pc.espessura || pc.esp || '');
+
+    checkedCampo('eEngrossado', pc.engrossado || pc.engrosso || pc.duplo);
+    checkedCampo('eFitaC1', pc.fita_c1 || pc.c1);
+    checkedCampo('eFitaC2', pc.fita_c2 || pc.c2);
+    checkedCampo('eFitaL1', pc.fita_l1 || pc.l1);
+    checkedCampo('eFitaL2', pc.fita_l2 || pc.l2);
+
+    valorCampo('eLarguraFita', pc.largura_fita || pc.fita_largura || pc.larguraFita || 22);
+    valorCampo('eCorFita', pc.cor_fita || pc.fita_cor || '');
+
+    valorCampo('eTipoPuxador', pc.tipo_puxador || pc.puxador_tipo || (pc.metros_puxador ? 'Puxador Gola' : 'Nenhum'));
+    valorCampo('ePosicaoPuxador', pc.puxador_posicao || pc.lado_puxador || 'Nenhum');
+    valorCampo('eMetrosPuxador', pc.metros_puxador || pc.puxador_metros || '');
+
+    valorCampo('eTipoDobradica', pc.tipo_dobradica || 'Nenhuma');
+    valorCampo('eQtdDobradicas', pc.qtd_dobradicas || pc.dobradicas || '');
+
+    valorCampo('eTipoCorredica', pc.tipo_corredica || pc.modelo_corredica || 'Nenhuma');
+    valorCampo('eMedidaCorredica', pc.medida_corredica || pc.corredica_medida || 500);
+    valorCampo('eQtdCorredicas', pc.qtd_corredicas || pc.corredicas || '');
+
+    valorCampo('eFerragemExtraQtd', pc.ferragem_extra_qtd || '');
+    valorCampo('eObservacoes', pc.observacoes || pc.obs || '');
+
+    document.getElementById('modalEditorPecaV16').style.display = 'block';
+  }
+
+  w.fecharEditorPecaCompleta = function(){
+    const modal = document.getElementById('modalEditorPecaV16');
+    if(modal) modal.style.display = 'none';
+  };
+
+  w.marcarTodasFitasV16 = function(){
+    ['eFitaC1','eFitaC2','eFitaL1','eFitaL2'].forEach(id => {
+      const el = document.getElementById(id);
+      if(el) el.checked = true;
+    });
+  };
+
+  w.aplicarMaterialEditorV16 = function(){
+    const idMat = document.getElementById('eMaterialSelect')?.value || '';
+    const m = buscarMaterial(idMat);
+    if(!m) return;
+    valorCampo('eMaterialNome', m.nome || '');
+    valorCampo('eEspessura', m.espessura || m.esp || '');
+  };
+
+  w.aplicarFitaEditorV16 = function(){
+    const idFita = document.getElementById('eFitaSelect')?.value || '';
+    const f = buscarFita(idFita);
+    if(!f) return;
+    valorCampo('eCorFita', f.nome || '');
+    valorCampo('eLarguraFita', f.largura || f.larg || 22);
+  };
+
+  function campo(idCampo){
+    return document.getElementById(idCampo)?.value ?? '';
+  }
+
+  function campoCheck(idCampo){
+    return !!document.getElementById(idCampo)?.checked;
+  }
+
+  w.salvarEditorPecaCompleta = function(){
+    const p = projetoAtual();
+    if(!p) return alert('Projeto não localizado.');
+    if(!Array.isArray(p.pecas)) p.pecas = [];
+
+    let pc = {};
+    if(indiceEdicaoV16 !== 'nova' && p.pecas[parseInt(indiceEdicaoV16,10)]){
+      pc = p.pecas[parseInt(indiceEdicaoV16,10)];
+    } else {
+      pc = {id:id()};
+    }
+
+    const idMaterial = campo('eMaterialSelect');
+    const mat = buscarMaterial(idMaterial);
+    const idFita = campo('eFitaSelect');
+    const fita = buscarFita(idFita);
+
+    const idFerragemExtra = campo('eFerragemExtra');
+    const ferrExtra = buscarFerragem(idFerragemExtra);
+    const idFerrPux = campo('eFerragemPuxador');
+    const ferrPux = buscarFerragem(idFerrPux);
+    const idFerrDob = campo('eFerragemDobradica');
+    const ferrDob = buscarFerragem(idFerrDob);
+
+    const comp = num(campo('eComp'), pc.comp || pc.comprimento || 0);
+    const larg = num(campo('eLarg'), pc.larg || pc.largura || 0);
+    const posPuxador = campo('ePosicaoPuxador');
+    let metrosPuxador = num(campo('eMetrosPuxador'), 0);
+    if(!metrosPuxador && campo('eTipoPuxador') !== 'Nenhum'){
+      if(posPuxador === 'Comprimento' || posPuxador === 'Superior' || posPuxador === 'Inferior') metrosPuxador = comp ? comp / 1000 : 0;
+      if(posPuxador === 'Largura' || posPuxador === 'Lateral') metrosPuxador = larg ? larg / 1000 : 0;
+    }
+
+    pc.ambiente = campo('eAmbiente').trim();
+    pc.nome = campo('eNome').trim() || pc.nome || pc.nome_peca || 'Peça';
+    pc.nome_peca = pc.nome;
+    pc.descricao = pc.nome;
+
+    pc.qtd = num(campo('eQtd'), 1);
+    pc.quantidade = pc.qtd;
+    pc.comp = comp;
+    pc.comprimento = comp;
+    pc.larg = larg;
+    pc.largura = larg;
+
+    pc.id_material = idMaterial || pc.id_material || '';
+    pc.materialId = pc.id_material;
+    pc.material = campo('eMaterialNome').trim() || (mat ? mat.nome : pc.material || '');
+    pc.material_nome = pc.material;
+    pc.nome_material = pc.material;
+    pc.espessura = num(campo('eEspessura'), mat ? num(mat.espessura || mat.esp,0) : num(pc.espessura || pc.esp,0));
+    pc.esp = pc.espessura;
+
+    pc.engrossado = campoCheck('eEngrossado');
+
+    pc.fita_c1 = campoCheck('eFitaC1');
+    pc.fita_c2 = campoCheck('eFitaC2');
+    pc.fita_l1 = campoCheck('eFitaL1');
+    pc.fita_l2 = campoCheck('eFitaL2');
+    pc.c1 = pc.fita_c1;
+    pc.c2 = pc.fita_c2;
+    pc.l1 = pc.fita_l1;
+    pc.l2 = pc.fita_l2;
+    pc.largura_fita = num(campo('eLarguraFita'), fita ? num(fita.largura || fita.larg,22) : 22);
+    pc.fita_largura = pc.largura_fita;
+    pc.id_fita = idFita || '';
+    pc.fitaId = pc.id_fita;
+    pc.cor_fita = campo('eCorFita').trim() || (fita ? fita.nome : '');
+    pc.fita_cor = pc.cor_fita;
+
+    pc.tipo_puxador = campo('eTipoPuxador');
+    pc.puxador_tipo = pc.tipo_puxador;
+    pc.puxador_posicao = posPuxador;
+    pc.lado_puxador = posPuxador;
+    pc.metros_puxador = metrosPuxador;
+    pc.puxador_metros = metrosPuxador;
+    pc.ferragem_puxador_id = idFerrPux || '';
+    pc.ferragem_puxador_nome = ferrPux ? ferrPux.nome : '';
+
+    pc.tipo_dobradica = campo('eTipoDobradica');
+    pc.qtd_dobradicas = num(campo('eQtdDobradicas'), 0);
+    pc.dobradicas = pc.qtd_dobradicas;
+    pc.ferragem_dobradica_id = idFerrDob || '';
+    pc.ferragem_dobradica_nome = ferrDob ? ferrDob.nome : '';
+
+    pc.tipo_corredica = campo('eTipoCorredica');
+    pc.modelo_corredica = pc.tipo_corredica;
+    pc.medida_corredica = num(campo('eMedidaCorredica'), 500);
+    pc.corredica_medida = pc.medida_corredica;
+    pc.qtd_corredicas = num(campo('eQtdCorredicas'), 0);
+    pc.corredicas = pc.qtd_corredicas;
+
+    pc.ferragem_extra_id = idFerragemExtra || '';
+    pc.ferragem_extra_nome = ferrExtra ? ferrExtra.nome : '';
+    pc.ferragem_extra_qtd = num(campo('eFerragemExtraQtd'), 0);
+
+    pc.observacoes = campo('eObservacoes').trim();
+    pc.obs = pc.observacoes;
+
+    if(indiceEdicaoV16 === 'nova'){
+      p.pecas.push(pc);
+    } else {
+      p.pecas[parseInt(indiceEdicaoV16,10)] = pc;
+    }
+
+    salvarProjetoAtual();
+    w.fecharEditorPecaCompleta();
+    w.renderizarPecas();
+    if(typeof w.calcularCustoProjeto === 'function') setTimeout(() => w.calcularCustoProjeto(), 80);
+  };
+
+  w.excluirPecaProjeto = function(idx){
+    const p = projetoAtual();
+    idx = parseInt(idx,10);
+    if(!p || !Array.isArray(p.pecas) || !p.pecas[idx]) return alert('Peça não localizada.');
+    const nome = p.pecas[idx].nome || p.pecas[idx].nome_peca || `Peça ${idx+1}`;
+    if(!confirm(`Excluir a peça "${nome}"?`)) return;
+    p.pecas.splice(idx,1);
+    salvarProjetoAtual();
+    w.renderizarPecas();
+    if(typeof w.calcularCustoProjeto === 'function') setTimeout(() => w.calcularCustoProjeto(), 80);
+  };
+
+  w.excluirPecaEditorAtualV16 = function(){
+    if(indiceEdicaoV16 === 'nova'){
+      w.fecharEditorPecaCompleta();
+      return;
+    }
+    w.fecharEditorPecaCompleta();
+    w.excluirPecaProjeto(indiceEdicaoV16);
+  };
+
+  const abrirOriginal = w.abrirProjeto;
+  w.abrirProjeto = function(idProjeto){
+    if(typeof abrirOriginal === 'function'){
+      try{ abrirOriginal(idProjeto); }catch(e){}
+    }
+    carregar();
+    if(idProjeto){
+      const p = w.projetos.find(x => String(x.id) === String(idProjeto));
+      if(p) w.projetoAtual = p;
+    }
+    setTimeout(() => {
+      try{ w.renderizarPecas(); }catch(e){}
+      try{ if(typeof w.calcularCustoProjeto === 'function') w.calcularCustoProjeto(); }catch(e){}
+    }, 120);
+  };
+
+  document.addEventListener('DOMContentLoaded', function(){
+    setTimeout(() => {
+      criarModal();
+      mostrarBotaoAdicionar();
+      try{ w.renderizarPecas(); }catch(e){}
+    }, 800);
+  });
+})(window);
+</script>
+
+
+
 
 
 
