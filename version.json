@@ -1,6 +1,6 @@
 {
-  "version": "2026.06.06.14",
+  "version": "2026.06.06.15",
   "name": "Marcenaria Pro",
   "license": "Jeremias Palhão",
-  "notes": "Correção de preços Promob: leitura flexível de campos das peças, diagnóstico de preço e vínculo automático."
+  "notes": "Correção: persistência forte do banco de materiais e opção de largura de fitas 22/45/64mm."
 }
