@@ -1,6 +1,6 @@
 {
-  "version": "2026.06.06.17",
+  "version": "2026.06.06.18",
   "name": "Marcenaria Pro",
   "license": "Jeremias Palhão",
-  "notes": "Adicionada área de Estoque vinculada ao banco: MDF, ferragens, fitas, parafusos e outros itens, com incluir, alterar e excluir."
+  "notes": "Revisão profissional: validação estrutural, reforço do estoque e cálculo de custo flexível para MDF, fitas, ferragens, puxadores e corrediças."
 }

@@ -1,17 +1,13 @@
-MARCENARIA PRO - PWA v2026.06.06.17
+MARCENARIA PRO - PWA v2026.06.06.18
 
-Novo:
-- Área Estoque no menu.
-- Cadastro de MDF, ferragens, fitas, parafusos e outros itens.
-- Incluir, alterar e excluir itens.
-- Entrada e saída de quantidade.
-- Valor total do estoque.
-- Estoque mínimo e alerta de item baixo/zerado.
-- Vinculação automática com Banco de Materiais:
-  MDF -> Chapas
-  Fitas -> Fitas de Borda
-  Ferragens e Parafusos -> Ferragens
-- Exportar estoque em CSV.
+Revisão profissional:
+- Sintaxe JavaScript validada.
+- Reforço do cálculo de custos com leitura flexível de peças.
+- Cálculo de MDF, fitas, ferragens, puxador, dobradiça e corrediça.
+- Correção preventiva para projeto atual e estoque.
+- Botão Revisão Profissional do Sistema.
+- Estoque permanece vinculado ao Banco de Materiais.
+- Sem apagar dados existentes do navegador.
 
 Substitua no GitHub:
 index.html
@@ -19,4 +15,4 @@ version.json
 service-worker.js
 
 Teste:
-https://jeremias351991.github.io/marcenaria-pro/?v=17
+https://jeremias351991.github.io/marcenaria-pro/?v=18
