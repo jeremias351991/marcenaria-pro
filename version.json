@@ -1,6 +1,6 @@
 {
-  "version": "2026.06.06.18",
+  "version": "2026.06.06.19",
   "name": "Marcenaria Pro",
   "license": "Jeremias Palhão",
-  "notes": "Revisão profissional: validação estrutural, reforço do estoque e cálculo de custo flexível para MDF, fitas, ferragens, puxadores e corrediças."
+  "notes": "Correção do backup: persistirTudo definido, backup seguro, backup emergencial e restaurar sistema reforçados."
 }

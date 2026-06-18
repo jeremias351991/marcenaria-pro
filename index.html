@@ -8466,6 +8466,141 @@ function excluirItemMaterial(id) {
 })(window);
 </script>
 
+<script id="backup-fix-v19">
+/* V19 - Corrige persistirTudo e backup/restauração */
+(function(w){
+  const V='2026.06.06.19';
+  const KEYS=[
+    'marcenaria_materiais','marcenaria_fitas','marcenaria_ferragens','marcenaria_dicionario',
+    'marcenaria_projetos','marcenaria_gastos_manuais','marcenaria_estoque_v17',
+    'marcenaria_backup_v15','marcenaria_backup_v19_snapshot','marcenaria_app_version'
+  ];
+
+  function parse(raw,fb){try{return JSON.parse(raw)}catch(e){return fb}}
+  function arr(k){const d=parse(localStorage.getItem(k)||'[]',[]);return Array.isArray(d)?d:[]}
+  function set(k,v){localStorage.setItem(k,JSON.stringify(Array.isArray(v)?v:[]))}
+  function nomeData(){return new Date().toISOString().slice(0,19).replace(/[:T]/g,'-')}
+  function baixar(nome,txt,tipo){
+    try{ if(typeof w.baixarArquivo==='function'){w.baixarArquivo(nome,txt,tipo||'application/json;charset=utf-8');return;} }catch(e){}
+    const blob=new Blob([txt||''],{type:tipo||'application/json;charset=utf-8'});
+    const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=nome||'backup.json';
+    document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),1000);
+  }
+
+  function memoriaParaStorage(){
+    try{
+      if(Array.isArray(w.materiais)&&w.materiais.length)set('marcenaria_materiais',w.materiais);
+      if(Array.isArray(w.fitas)&&w.fitas.length)set('marcenaria_fitas',w.fitas);
+      if(Array.isArray(w.ferragens)&&w.ferragens.length)set('marcenaria_ferragens',w.ferragens);
+      if(Array.isArray(w.dicionarioMateriais)&&w.dicionarioMateriais.length)set('marcenaria_dicionario',w.dicionarioMateriais);
+      if(Array.isArray(w.projetos)&&w.projetos.length)set('marcenaria_projetos',w.projetos);
+      if(Array.isArray(w.gastosManuais)&&w.gastosManuais.length)set('marcenaria_gastos_manuais',w.gastosManuais);
+      if(Array.isArray(w.estoqueMarcenaria)&&w.estoqueMarcenaria.length)set('marcenaria_estoque_v17',w.estoqueMarcenaria);
+    }catch(e){console.warn('memoriaParaStorage',e)}
+  }
+
+  function storageParaMemoria(){
+    const m=arr('marcenaria_materiais'), f=arr('marcenaria_fitas'), h=arr('marcenaria_ferragens'),
+          d=arr('marcenaria_dicionario'), p=arr('marcenaria_projetos'), g=arr('marcenaria_gastos_manuais'),
+          e=arr('marcenaria_estoque_v17');
+    if(m.length)w.materiais=m;if(f.length)w.fitas=f;if(h.length)w.ferragens=h;if(d.length)w.dicionarioMateriais=d;
+    if(p.length)w.projetos=p;if(g.length)w.gastosManuais=g;if(e.length)w.estoqueMarcenaria=e;
+  }
+
+  w.persistirTudo=function(){
+    memoriaParaStorage();
+    const snap={
+      materiais:arr('marcenaria_materiais'),fitas:arr('marcenaria_fitas'),ferragens:arr('marcenaria_ferragens'),
+      dicionarioMateriais:arr('marcenaria_dicionario'),projetos:arr('marcenaria_projetos'),
+      gastosManuais:arr('marcenaria_gastos_manuais'),estoqueMarcenaria:arr('marcenaria_estoque_v17'),
+      data:new Date().toISOString(),versao:V
+    };
+    try{localStorage.setItem('marcenaria_backup_v19_snapshot',JSON.stringify(snap));localStorage.setItem('marcenaria_app_version',V)}catch(e){}
+    return snap;
+  };
+  try{persistirTudo=w.persistirTudo}catch(e){}
+
+  function montarBackup(){
+    w.persistirTudo();
+    const dados={};
+    KEYS.forEach(k=>{const raw=localStorage.getItem(k);dados[k]=raw===null?null:parse(raw,raw)});
+    Object.keys(localStorage).forEach(k=>{if(k.startsWith('marcenaria_')&&!(k in dados)){const raw=localStorage.getItem(k);dados[k]=parse(raw,raw)}});
+    return {tipo:'backup_marcenaria_pro',versao_backup:V,gerado_em:new Date().toISOString(),url:location.href,dados};
+  }
+
+  w.baixarBackupCompleto=function(){
+    try{baixar('backup_marcenaria_pro_'+nomeData()+'.json',JSON.stringify(montarBackup(),null,2),'application/json;charset=utf-8')}
+    catch(e){alert('Erro ao baixar backup: '+e.message)}
+  };
+  w.baixarBackupEmergencial=function(){
+    try{const b=montarBackup();b.tipo='backup_emergencial_marcenaria_pro';baixar('backup_emergencial_marcenaria_pro_'+nomeData()+'.json',JSON.stringify(b,null,2),'application/json;charset=utf-8')}
+    catch(e){alert('Erro no backup emergencial: '+e.message)}
+  };
+
+  w.exportarBackup=w.baixarBackupCompleto;
+  w.baixarBackup=w.baixarBackupCompleto;
+  w.exportarBackupCompleto=w.baixarBackupCompleto;
+  w.backupEmergencial=w.baixarBackupEmergencial;
+
+  function aplicar(obj){
+    if(!obj||typeof obj!=='object')throw new Error('Arquivo inválido.');
+    const dados=obj.dados||obj;
+    Object.keys(dados).forEach(k=>{
+      if(!k.startsWith('marcenaria_'))return;
+      const v=dados[k]; if(v===null||v===undefined)return;
+      localStorage.setItem(k,typeof v==='string'?v:JSON.stringify(v));
+    });
+    storageParaMemoria();
+    try{w.renderizarMateriais&&w.renderizarMateriais()}catch(e){}
+    try{w.renderizarFitas&&w.renderizarFitas()}catch(e){}
+    try{w.renderizarFerragens&&w.renderizarFerragens()}catch(e){}
+    try{w.renderizarProjetos&&w.renderizarProjetos()}catch(e){}
+    try{w.renderizarEstoque&&w.renderizarEstoque()}catch(e){}
+    try{w.calcularCustoProjeto&&w.calcularCustoProjeto()}catch(e){}
+  }
+
+  w.importarBackupSistema=function(ev){
+    let file=null;
+    if(ev&&ev.target&&ev.target.files)file=ev.target.files[0];
+    if(ev instanceof File)file=ev;
+    if(!file){
+      const input=document.createElement('input');input.type='file';input.accept='.json,application/json';
+      input.onchange=e=>w.importarBackupSistema(e);input.click();return;
+    }
+    const r=new FileReader();
+    r.onload=function(){try{aplicar(JSON.parse(r.result));alert('Backup restaurado. A página será recarregada.');setTimeout(()=>location.reload(),600)}catch(e){alert('Erro ao restaurar backup: '+e.message)}};
+    r.readAsText(file,'utf-8');
+  };
+  w.restaurarBackup=w.importarBackupSistema; w.importarBackup=w.importarBackupSistema; w.restaurarSistema=w.importarBackupSistema;
+
+  function corrigirBotoes(){
+    Array.from(document.querySelectorAll('button,a')).forEach(btn=>{
+      const t=(btn.textContent||'').toLowerCase();
+      if(t.includes('baixar backup')||t.includes('exportar backup'))btn.onclick=e=>{e.preventDefault();w.baixarBackupCompleto()};
+      if(t.includes('backup emergencial'))btn.onclick=e=>{e.preventDefault();w.baixarBackupEmergencial()};
+      if(t.includes('importar backup')||t.includes('restaurar sistema'))btn.onclick=e=>{e.preventDefault();w.importarBackupSistema()};
+    });
+  }
+
+  function areaSegura(){
+    const cfg=document.getElementById('config')||document.getElementById('configuracoes')||document.querySelector('section[id*="config"]');
+    if(!cfg||document.getElementById('backupSeguroV19'))return;
+    const box=document.createElement('div');box.id='backupSeguroV19';
+    box.className='bg-white rounded-lg shadow p-5 border-l-4 border-green-700 my-5';
+    box.innerHTML='<h3 class="text-xl font-black text-gray-800 mb-2">🛡️ Backup Seguro V19</h3><p class="text-sm text-gray-600 mb-4">Use estes botões se o backup antigo apresentar erro.</p><div class="flex flex-col md:flex-row gap-3"><button type="button" onclick="baixarBackupCompleto()" class="bg-blue-700 text-white px-5 py-3 rounded font-black">⬇️ Baixar Backup Seguro</button><button type="button" onclick="baixarBackupEmergencial()" class="bg-green-700 text-white px-5 py-3 rounded font-black">🛡️ Backup Emergencial Seguro</button><button type="button" onclick="importarBackupSistema()" class="bg-slate-900 text-white px-5 py-3 rounded font-black">⬆️ Restaurar Backup Seguro</button></div>';
+    cfg.insertBefore(box,cfg.firstChild);
+  }
+
+  const oldShow=w.showTab;
+  w.showTab=function(tab){try{oldShow&&oldShow(tab)}catch(e){} setTimeout(()=>{corrigirBotoes();areaSegura()},100)};
+  try{showTab=w.showTab}catch(e){}
+  window.addEventListener('beforeunload',()=>{try{w.persistirTudo()}catch(e){}});
+  document.addEventListener('DOMContentLoaded',()=>setTimeout(()=>{storageParaMemoria();corrigirBotoes();areaSegura();try{w.persistirTudo()}catch(e){}},600));
+})(window);
+</script>
+
+
+
 
 
 
