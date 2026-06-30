@@ -1,13 +1,13 @@
-MARCENARIA PRO - PWA v2026.06.06.20
+MARCENARIA PRO - PWA v2026.06.06.22
 
-Correções:
+Finalizado:
 - Corrigido alterar valor de MDF, fita, ferragem e estoque.
-- Alteração agora salva em memória e localStorage.
 - Adicionada aba Mão de Obra.
 - Mão de obra: data, horas, valor/hora, local, serviço feito, tipo, profissionais, cliente e projeto.
 - Soma dias trabalhados, horas, produção, montagem e valor total.
 - Exporta CSV.
-- Botão Revisão Profissional V20.
+- Mantém correção do puxador por quantidade da peça.
+- Botão Revisão Profissional V22.
 
 Substitua no GitHub:
 index.html
@@ -15,4 +15,4 @@ version.json
 service-worker.js
 
 Teste:
-https://jeremias351991.github.io/marcenaria-pro/?v=20
+https://jeremias351991.github.io/marcenaria-pro/?v=22

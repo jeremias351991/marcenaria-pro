@@ -1,6 +1,6 @@
 {
-  "version": "2026.06.06.20",
+  "version": "2026.06.06.22",
   "name": "Marcenaria Pro",
   "license": "Jeremias Palhão",
-  "notes": "Revisão profissional final: corrigido alterar valor e adicionada aba Mão de Obra."
+  "notes": "Revisão profissional final: alterar valor corrigido, mão de obra adicionada e puxador por quantidade preservado."
 }
