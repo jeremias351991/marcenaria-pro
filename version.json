@@ -1,6 +1,6 @@
 {
-  "version": "2026.06.06.19",
+  "version": "2026.06.06.20",
   "name": "Marcenaria Pro",
   "license": "Jeremias Palhão",
-  "notes": "Correção do backup: persistirTudo definido, backup seguro, backup emergencial e restaurar sistema reforçados."
+  "notes": "Revisão profissional final: corrigido alterar valor e adicionada aba Mão de Obra."
 }

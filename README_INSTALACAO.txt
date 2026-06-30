@@ -1,12 +1,13 @@
-MARCENARIA PRO - PWA v2026.06.06.19
+MARCENARIA PRO - PWA v2026.06.06.20
 
-Correção:
-- Corrigido erro: persistirTudo is not defined.
-- Adicionado Backup Seguro V19.
-- Backup completo salva projetos, banco de materiais, fitas, ferragens, estoque, gastos e dicionário.
-- Backup emergencial reforçado.
-- Restaurar sistema reforçado.
-- Botões antigos de backup redirecionados para funções novas.
+Correções:
+- Corrigido alterar valor de MDF, fita, ferragem e estoque.
+- Alteração agora salva em memória e localStorage.
+- Adicionada aba Mão de Obra.
+- Mão de obra: data, horas, valor/hora, local, serviço feito, tipo, profissionais, cliente e projeto.
+- Soma dias trabalhados, horas, produção, montagem e valor total.
+- Exporta CSV.
+- Botão Revisão Profissional V20.
 
 Substitua no GitHub:
 index.html
@@ -14,4 +15,4 @@ version.json
 service-worker.js
 
 Teste:
-https://jeremias351991.github.io/marcenaria-pro/?v=19
+https://jeremias351991.github.io/marcenaria-pro/?v=20
